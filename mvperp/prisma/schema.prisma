@@ -1,0 +1,137 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email       String     @unique
+  password    String
+  name        String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  products    Product[]   // relación 1:N con productos
+  movements   Movement[]  // relación 1:N con movimientos
+  purchases   Purchase[]  // relación 1:N con compras
+}
+
+model Product {
+  id                  String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId              String       @db.Uuid
+  user                User         @relation(fields: [userId], references: [id])
+  name                String
+  type                String       // producto o servicio
+  barcode             String?
+  category            String?
+  sku                 String?
+  sellAtPOS           Boolean      @default(false)
+  includeInCatalog    Boolean      @default(false)
+  requirePrescription Boolean      @default(false)
+  saleUnit            String?
+  brand               String?
+  description         String?
+  useStock            Boolean      @default(true)
+  quantity            Float?
+  price               Float?
+  cost                Float?
+  stock               Float?
+  image               String?
+  location            String?
+  minimumQuantity     Float?
+  satKey              String?
+  iva                 Float?
+  ieps                Float?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  variants            Variant[]
+  priceLists          PriceList[]
+  movements           Movement[]
+  purchaseItems       PurchaseItem[]  // ← RELACIÓN AÑADIDA
+}
+
+model Variant {
+  id         String   @id @default(cuid())
+  productId  String   @db.Uuid
+  product    Product  @relation(fields: [productId], references: [id])
+  type       String   // tamaño, color, material, estilo
+  value      String   // ejemplo: "rojo", "XL"
+}
+
+model PriceList {
+  id         String   @id @default(cuid())
+  productId  String   @db.Uuid
+  product    Product  @relation(fields: [productId], references: [id])
+  name       String   // ejemplo: "Mayoreo", "Retail"
+  price      Float
+}
+
+model Movement {
+  id            String   @id @default(cuid())
+  productId     String   @db.Uuid
+  product       Product  @relation(fields: [productId], references: [id])
+  userId        String   @db.Uuid
+  user          User     @relation(fields: [userId], references: [id])
+  date          DateTime @default(now())
+  type          String   // "entrada" o "salida"
+  quantity      Float
+  previousStock Float
+  newStock      Float
+  location      String?
+  note          String?
+}
+
+model Supplier {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String
+  contactName       String?
+  phone             String?
+  email             String?
+  street            String?
+  neighborhood      String?
+  postalCode        String?
+  city              String?
+  state             String?
+  municipality      String?
+  rfc               String?
+  totalPurchases    Float    @default(0)
+  lastPurchase      DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  purchases         Purchase[]
+}
+
+model Purchase {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId        String   @db.Uuid
+  supplier          Supplier @relation(fields: [supplierId], references: [id])
+  userId            String   @db.Uuid
+  user              User     @relation(fields: [userId], references: [id])
+  date              DateTime @default(now())
+  totalAmount       Float
+  status            String   @default("pending") // pending, completed, cancelled
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  purchaseItems     PurchaseItem[]
+}
+
+model PurchaseItem {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  purchaseId        String   @db.Uuid
+  purchase          Purchase @relation(fields: [purchaseId], references: [id])
+  productId         String   @db.Uuid
+  product           Product  @relation(fields: [productId], references: [id])
+  quantity          Float
+  unitPrice         Float
+  totalPrice        Float
+  createdAt         DateTime @default(now())
+}
