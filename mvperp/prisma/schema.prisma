@@ -19,6 +19,7 @@ model User {
   products    Product[]   // relación 1:N con productos
   movements   Movement[]  // relación 1:N con movimientos
   purchases   Purchase[]  // relación 1:N con compras
+  sales       Sale[]      // relación 1:N con ventas ← AÑADIDO
 }
 
 model Product {
@@ -53,7 +54,8 @@ model Product {
   variants            Variant[]
   priceLists          PriceList[]
   movements           Movement[]
-  purchaseItems       PurchaseItem[]  // ← RELACIÓN AÑADIDA
+  purchaseItems       PurchaseItem[]
+  saleItems           SaleItem[]   // ← AÑADIDO
 }
 
 model Variant {
@@ -134,4 +136,45 @@ model PurchaseItem {
   unitPrice         Float
   totalPrice        Float
   createdAt         DateTime @default(now())
+}
+
+model Customer {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  email       String?  @unique
+  phone       String?
+  address     String?
+  rfc         String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  sales       Sale[]   // relación 1:N con ventas
+}
+
+model Sale {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customerId  String   @db.Uuid
+  customer    Customer @relation(fields: [customerId], references: [id])
+  userId      String   @db.Uuid
+  user        User     @relation(fields: [userId], references: [id])
+  date        DateTime @default(now())
+  totalAmount Float
+  status      String   @default("completed") // completed, cancelled, refunded
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  saleItems   SaleItem[]
+}
+
+model SaleItem {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  saleId      String   @db.Uuid
+  sale        Sale     @relation(fields: [saleId], references: [id])
+  productId   String   @db.Uuid
+  product     Product  @relation(fields: [productId], references: [id])
+  quantity    Float
+  unitPrice   Float
+  totalPrice  Float
+  createdAt   DateTime @default(now())
 }

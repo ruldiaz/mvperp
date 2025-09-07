@@ -11,16 +11,15 @@ interface SidebarProps {
 const menuItems = [
   { id: "inicio", path: "/dashboard", label: "INICIO" },
   { id: "productos", path: "/dashboard/products", label: "PRODUCTOS" },
+  { id: "clientes", path: "/dashboard/customers", label: "CLIENTES" },
+  { id: "ventas", path: "/dashboard/sales", label: "VENTAS" },
   { id: "compras", path: "/dashboard/purchases", label: "COMPRAS" },
   { id: "proveedores", path: "/dashboard/suppliers", label: "PROVEEDORES" },
   { id: "perfil", path: "/dashboard/profile", label: "PERFIL" },
   { id: "ajustes", path: "/dashboard/settings", label: "AJUSTES" },
 ];
 
-export default function Sidebar({
-  //selectedPage,
-  setSelectedPage,
-}: SidebarProps) {
+export default function Sidebar({ setSelectedPage }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
 
