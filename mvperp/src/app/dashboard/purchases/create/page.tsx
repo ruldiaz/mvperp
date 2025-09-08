@@ -3,18 +3,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { PurchaseItemRequest } from "@/types/purchase";
+import { Product } from "@/types/product";
 
-interface Product {
-  id: string;
-  name: string;
-  sku?: string;
-  stock?: number;
-}
-
-interface PurchaseItem {
-  productId: string;
-  quantity: number;
-  unitPrice: number;
+interface PurchaseItem extends PurchaseItemRequest {
   totalPrice: number;
 }
 
@@ -30,9 +22,14 @@ export default function CreatePurchase() {
 
   useEffect(() => {
     const fetchProducts = async () => {
-      const res = await fetch("/api/products", { credentials: "include" });
-      const data = await res.json();
-      setProducts(data.products);
+      try {
+        const res = await fetch("/api/products", { credentials: "include" });
+        if (!res.ok) throw new Error("Error al cargar productos");
+        const data = await res.json();
+        setProducts(data.products);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+      }
     };
     fetchProducts();
   }, []);
@@ -48,7 +45,6 @@ export default function CreatePurchase() {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
 
-    // Calcular totalPrice si cambia quantity o unitPrice
     if (field === "quantity" || field === "unitPrice") {
       newItems[index].totalPrice =
         newItems[index].quantity * newItems[index].unitPrice;
@@ -75,9 +71,17 @@ export default function CreatePurchase() {
 
       if (res.ok) {
         router.push("/dashboard/purchases");
+      } else {
+        const errorData = await res.json();
+        console.error("Error creating purchase:", errorData);
+        alert(
+          "Error al crear la compra: " +
+            (errorData.error || "Error desconocido")
+        );
       }
     } catch (error) {
-      console.error(error);
+      console.error("Network error:", error);
+      alert("Error de conexión al crear la compra");
     } finally {
       setLoading(false);
     }
@@ -85,9 +89,25 @@ export default function CreatePurchase() {
 
   const totalAmount = items.reduce((sum, item) => sum + item.totalPrice, 0);
 
+  const purchasableProducts = products.filter(
+    (product) => product.type === "producto"
+  );
+
   return (
     <div className="p-4 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">Realizar Compra</h1>
+
+      {!supplierId && (
+        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
+          <p>⚠️ Debe seleccionar un proveedor antes de crear una compra.</p>
+          <button
+            onClick={() => router.push("/dashboard/suppliers")}
+            className="mt-2 bg-yellow-600 text-white px-3 py-1 rounded text-sm"
+          >
+            Seleccionar Proveedor
+          </button>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
@@ -97,6 +117,7 @@ export default function CreatePurchase() {
             onChange={(e) => setNotes(e.target.value)}
             className="w-full border p-2 rounded"
             rows={3}
+            placeholder="Notas adicionales sobre la compra..."
           />
         </div>
 
@@ -107,6 +128,7 @@ export default function CreatePurchase() {
               type="button"
               onClick={addItem}
               className="bg-green-600 text-white px-3 py-1 rounded"
+              disabled={!supplierId}
             >
               + Agregar Producto
             </button>
@@ -125,11 +147,14 @@ export default function CreatePurchase() {
                   }
                   className="w-full border p-2 rounded"
                   required
+                  disabled={!supplierId}
                 >
                   <option value="">Seleccionar producto</option>
-                  {products.map((product) => (
+                  {purchasableProducts.map((product) => (
                     <option key={product.id} value={product.id}>
                       {product.name} {product.sku && `(${product.sku})`}
+                      {product.stock !== undefined &&
+                        ` - Stock: ${product.stock}`}
                     </option>
                   ))}
                 </select>
@@ -141,14 +166,15 @@ export default function CreatePurchase() {
                 </label>
                 <input
                   type="number"
-                  min="1"
-                  step="1"
+                  min="0.01"
+                  step="0.01"
                   value={item.quantity}
                   onChange={(e) =>
                     updateItem(index, "quantity", Number(e.target.value))
                   }
                   className="w-full border p-2 rounded"
                   required
+                  disabled={!supplierId}
                 />
               </div>
 
@@ -158,7 +184,7 @@ export default function CreatePurchase() {
                 </label>
                 <input
                   type="number"
-                  min="0"
+                  min="0.01"
                   step="0.01"
                   value={item.unitPrice}
                   onChange={(e) =>
@@ -166,14 +192,18 @@ export default function CreatePurchase() {
                   }
                   className="w-full border p-2 rounded"
                   required
+                  disabled={!supplierId}
                 />
               </div>
 
               <div className="col-span-2">
                 <label className="block text-sm font-medium mb-1">Total</label>
                 <input
-                  type="number"
-                  value={item.totalPrice.toFixed(2)}
+                  type="text"
+                  value={item.totalPrice.toLocaleString("es-MX", {
+                    style: "currency",
+                    currency: "MXN",
+                  })}
                   className="w-full border p-2 rounded bg-gray-100"
                   readOnly
                 />
@@ -183,7 +213,8 @@ export default function CreatePurchase() {
                 <button
                   type="button"
                   onClick={() => removeItem(index)}
-                  className="bg-red-600 text-white p-2 rounded"
+                  className="bg-red-600 text-white p-2 rounded w-full"
+                  disabled={!supplierId}
                 >
                   ✕
                 </button>
@@ -192,12 +223,19 @@ export default function CreatePurchase() {
           ))}
         </div>
 
-        <div className="border-t pt-4">
-          <div className="flex justify-between items-center">
-            <span className="text-lg font-semibold">Total de la Compra:</span>
-            <span className="text-xl font-bold">${totalAmount.toFixed(2)}</span>
+        {items.length > 0 && (
+          <div className="border-t pt-4">
+            <div className="flex justify-between items-center">
+              <span className="text-lg font-semibold">Total de la Compra:</span>
+              <span className="text-xl font-bold">
+                {totalAmount.toLocaleString("es-MX", {
+                  style: "currency",
+                  currency: "MXN",
+                })}
+              </span>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="flex gap-3 justify-end">
           <button
@@ -209,7 +247,7 @@ export default function CreatePurchase() {
           </button>
           <button
             type="submit"
-            disabled={loading || items.length === 0}
+            disabled={loading || items.length === 0 || !supplierId}
             className="bg-blue-600 text-white px-4 py-2 rounded disabled:bg-blue-400"
           >
             {loading ? "Procesando..." : "Registrar Compra"}

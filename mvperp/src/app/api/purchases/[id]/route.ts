@@ -19,7 +19,6 @@ interface Params {
 
 export async function GET(req: NextRequest, { params }: Params) {
   try {
-    // Verificar autenticación
     if (!JWT_SECRET) {
       return NextResponse.json(
         { error: "JWT secret no definido" },
@@ -45,9 +44,8 @@ export async function GET(req: NextRequest, { params }: Params) {
 
     const { id } = params;
 
-    // Obtener compra con información relacionada
     const purchase = await prisma.purchase.findUnique({
-      where: { id },
+      where: { id, userId },
       include: {
         user: {
           select: {
@@ -66,6 +64,7 @@ export async function GET(req: NextRequest, { params }: Params) {
           include: {
             product: {
               select: {
+                id: true,
                 name: true,
                 sku: true,
               },

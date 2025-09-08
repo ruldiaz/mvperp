@@ -3,37 +3,9 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { PurchaseDetail } from "@/types/purchase";
 
-interface PurchaseDetail {
-  id: string;
-  date: Date;
-  type: string;
-  status: string;
-  totalAmount: number;
-  notes: string;
-  user: {
-    name: string;
-  };
-  supplier: {
-    name: string;
-    contactName: string;
-    phone: string;
-    email: string;
-  };
-  purchaseItems: {
-    id: string;
-    quantity: number;
-    unitPrice: number;
-    totalPrice: number;
-    product: {
-      id: string;
-      name: string;
-      sku: string;
-    };
-  }[];
-}
-
-export default function PurchaseDetail() {
+export default function PurchaseDetailPage() {
   const [purchase, setPurchase] = useState<PurchaseDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const params = useParams();
@@ -189,9 +161,11 @@ export default function PurchaseDetail() {
             <tbody>
               {purchase.purchaseItems.map((item) => (
                 <tr key={item.id}>
-                  <td className="border px-4 py-2">{item.product.name}</td>
                   <td className="border px-4 py-2">
-                    {item.product.sku || "N/A"}
+                    {item.product?.name || "Producto no encontrado"}
+                  </td>
+                  <td className="border px-4 py-2">
+                    {item.product?.sku || "N/A"}
                   </td>
                   <td className="border px-4 py-2 text-center">
                     {item.quantity}

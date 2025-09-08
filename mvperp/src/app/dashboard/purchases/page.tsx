@@ -3,26 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-
-interface Purchase {
-  id: string;
-  date: Date;
-  type: string;
-  user: {
-    name: string;
-  };
-  supplier: {
-    name: string;
-  };
-  status: string;
-  totalAmount: number;
-  debt: number;
-  purchaseItems: {
-    quantity: number;
-    unitPrice: number;
-    totalPrice: number;
-  }[];
-}
+import { Purchase } from "@/types/purchase";
 
 export default function Purchases() {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
@@ -31,7 +12,6 @@ export default function Purchases() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // Cargar compras
   useEffect(() => {
     const fetchPurchases = async () => {
       try {
@@ -49,7 +29,6 @@ export default function Purchases() {
     fetchPurchases();
   }, []);
 
-  // Filtrar compras cuando cambia el término de búsqueda
   useEffect(() => {
     if (!searchTerm) {
       setFilteredPurchases(purchases);
@@ -59,8 +38,7 @@ export default function Purchases() {
         (purchase) =>
           purchase.supplier.name.toLowerCase().includes(term) ||
           purchase.user.name.toLowerCase().includes(term) ||
-          purchase.status.toLowerCase().includes(term) ||
-          purchase.type.toLowerCase().includes(term)
+          purchase.status.toLowerCase().includes(term)
       );
       setFilteredPurchases(filtered);
     }
@@ -105,7 +83,6 @@ export default function Purchases() {
         </button>
       </div>
 
-      {/* Input de búsqueda */}
       <div className="mb-4">
         <input
           type="text"
@@ -122,7 +99,6 @@ export default function Purchases() {
             <tr className="bg-gray-200">
               <th className="border px-4 py-2">Compra</th>
               <th className="border px-4 py-2">Fecha</th>
-              <th className="border px-4 py-2">Tipo</th>
               <th className="border px-4 py-2">Registrado por</th>
               <th className="border px-4 py-2">Proveedor</th>
               <th className="border px-4 py-2">Estado</th>
@@ -143,9 +119,6 @@ export default function Purchases() {
                   </td>
                   <td className="border px-4 py-2">
                     {formatDate(purchase.date)}
-                  </td>
-                  <td className="border px-4 py-2">
-                    {purchase.type || "Compra"}
                   </td>
                   <td className="border px-4 py-2">{purchase.user.name}</td>
                   <td className="border px-4 py-2">{purchase.supplier.name}</td>
@@ -176,7 +149,7 @@ export default function Purchases() {
               ))
             ) : (
               <tr>
-                <td colSpan={8} className="border px-4 py-2 text-center">
+                <td colSpan={7} className="border px-4 py-2 text-center">
                   {searchTerm
                     ? "No se encontraron compras"
                     : "No hay compras registradas"}

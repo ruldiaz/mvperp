@@ -2,21 +2,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import jwt from "jsonwebtoken";
+import { PurchaseItemRequest, PurchaseRequest } from "@/types/purchase";
 
 const JWT_SECRET = process.env.JWT_SECRET;
-
-// Interfaces para los tipos
-interface PurchaseItemRequest {
-  productId: string;
-  quantity: number;
-  unitPrice: number;
-}
-
-interface PurchaseRequest {
-  supplierId: string;
-  items: PurchaseItemRequest[];
-  notes?: string;
-}
 
 interface JwtPayload {
   userId: string;
@@ -26,7 +14,6 @@ interface JwtPayload {
 
 export async function POST(req: NextRequest) {
   try {
-    // Verificar autenticación usando tu sistema JWT
     if (!JWT_SECRET) {
       return NextResponse.json(
         { error: "JWT secret no definido" },
@@ -52,7 +39,6 @@ export async function POST(req: NextRequest) {
 
     const { supplierId, items, notes }: PurchaseRequest = await req.json();
 
-    // Validaciones básicas
     if (!supplierId || !items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
         { error: "Datos de compra inválidos" },
@@ -60,7 +46,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validar cada item
     for (const item of items) {
       if (!item.productId || item.quantity <= 0 || item.unitPrice <= 0) {
         return NextResponse.json(
@@ -70,7 +55,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 1. Calcular el total de la compra
     const totalAmount = items.reduce(
       (sum: number, item: PurchaseItemRequest) => {
         return sum + item.quantity * item.unitPrice;
@@ -78,7 +62,6 @@ export async function POST(req: NextRequest) {
       0
     );
 
-    // 2. Crear la compra
     const purchase = await prisma.purchase.create({
       data: {
         supplierId,
@@ -99,7 +82,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // 3. Crear movimientos y actualizar stock
     for (const item of items) {
       const product = await prisma.product.findUnique({
         where: { id: item.productId },
@@ -109,7 +91,6 @@ export async function POST(req: NextRequest) {
         const previousStock = product.stock || 0;
         const newStock = previousStock + item.quantity;
 
-        // Crear movimiento
         await prisma.movement.create({
           data: {
             productId: item.productId,
@@ -122,21 +103,15 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        // Actualizar producto - solo stock, mantener precio y costo existentes
         await prisma.product.update({
           where: { id: item.productId },
           data: {
             stock: newStock,
-            // Opcional: actualizar el costo con el último precio de compra
-            // cost: item.unitPrice,
           },
         });
-      } else {
-        console.warn(`Producto con ID ${item.productId} no encontrado`);
       }
     }
 
-    // 4. Actualizar el proveedor
     await prisma.supplier.update({
       where: { id: supplierId },
       data: {
@@ -155,10 +130,8 @@ export async function POST(req: NextRequest) {
   }
 }
 
-
 export async function GET(req: NextRequest) {
   try {
-    // Verificar autenticación
     if (!JWT_SECRET) {
       return NextResponse.json(
         { error: "JWT secret no definido" },
@@ -182,8 +155,8 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Obtener compras con información relacionada
     const purchases = await prisma.purchase.findMany({
+      where: { userId },
       include: {
         user: {
           select: {
@@ -202,7 +175,6 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // Calcular deuda (si el estado es pendiente, la deuda es igual al total)
     const purchasesWithDebt = purchases.map((purchase) => ({
       ...purchase,
       debt: purchase.status === "pending" ? purchase.totalAmount : 0,
