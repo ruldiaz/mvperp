@@ -37,6 +37,7 @@ export interface Product {
   satKey?: string;
   iva?: number;
   ieps?: number;
+  satUnitKey?: string;
 
   variants?: Variant[];
   priceLists?: PriceList[];

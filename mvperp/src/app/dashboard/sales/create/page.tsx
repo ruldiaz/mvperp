@@ -52,7 +52,15 @@ export default function CreateSale() {
   const addItem = () => {
     setItems([
       ...items,
-      { productId: "", quantity: 1, unitPrice: 0, totalPrice: 0 },
+      {
+        productId: "",
+        quantity: 1,
+        unitPrice: 0,
+        totalPrice: 0,
+        satProductKey: "",
+        satUnitKey: "",
+        description: "",
+      },
     ]);
   };
 
@@ -82,9 +90,10 @@ export default function CreateSale() {
   };
 
   const handleProductChange = (index: number, productId: string) => {
-    const price = getProductPrice(productId);
+    const product = products.find((p) => p.id === productId);
+    const price = product?.price || 0;
 
-    // Actualizar ambos campos al mismo tiempo
+    // Actualizar campos con información del producto
     setItems((prevItems) => {
       const newItems = [...prevItems];
       newItems[index] = {
@@ -92,6 +101,9 @@ export default function CreateSale() {
         productId: productId,
         unitPrice: price,
         totalPrice: newItems[index].quantity * price,
+        satProductKey: product?.satKey || "",
+        satUnitKey: product?.satUnitKey || "",
+        description: product?.name || "",
       };
       return newItems;
     });
@@ -127,6 +139,9 @@ export default function CreateSale() {
           productId: item.productId,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
+          satProductKey: item.satProductKey,
+          satUnitKey: item.satUnitKey,
+          description: item.description,
         })),
         notes,
       };
@@ -297,6 +312,54 @@ export default function CreateSale() {
                 >
                   ✕
                 </button>
+              </div>
+
+              {/* Campos SAT para cada producto */}
+              <div className="col-span-12 grid grid-cols-3 gap-3 mt-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Clave Producto SAT
+                  </label>
+                  <input
+                    type="text"
+                    value={item.satProductKey || ""}
+                    onChange={(e) =>
+                      updateItem(index, "satProductKey", e.target.value)
+                    }
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Clave SAT"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Clave Unidad SAT
+                  </label>
+                  <input
+                    type="text"
+                    value={item.satUnitKey || ""}
+                    onChange={(e) =>
+                      updateItem(index, "satUnitKey", e.target.value)
+                    }
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Clave unidad"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Descripción
+                  </label>
+                  <input
+                    type="text"
+                    value={item.description || ""}
+                    onChange={(e) =>
+                      updateItem(index, "description", e.target.value)
+                    }
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Descripción para factura"
+                  />
+                </div>
               </div>
             </div>
           ))}

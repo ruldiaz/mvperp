@@ -82,6 +82,8 @@ export async function GET(request: NextRequest) {
                 select: {
                   name: true,
                   sku: true,
+                  satKey: true,
+                  satUnitKey: true,
                 },
               },
             },
@@ -160,6 +162,9 @@ export async function POST(request: NextRequest) {
               quantity: item.quantity,
               unitPrice: item.unitPrice,
               totalPrice: item.quantity * item.unitPrice,
+              satProductKey: item.satProductKey,
+              satUnitKey: item.satUnitKey,
+              description: item.description,
             })),
           },
         },

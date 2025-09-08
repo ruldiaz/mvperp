@@ -1,5 +1,5 @@
 // src/types/sale.ts
-import { Customer } from "./customer"; // Importar el tipo Customer
+import { Customer } from "./customer";
 
 export interface SaleItem {
   id?: string;
@@ -7,9 +7,14 @@ export interface SaleItem {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+  satProductKey?: string;
+  satUnitKey?: string;
+  description?: string;
   product?: {
     name: string;
     sku?: string;
+    satKey?: string;
+    satUnitKey?: string;
   };
 }
 
