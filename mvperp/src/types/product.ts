@@ -1,20 +1,19 @@
 // src/types/product.ts
-
 export interface Variant {
-  id?: string; // opcional porque al crear aún no tiene id
-  type: string; // tamaño, color, material, estilo
-  value: string; // ejemplo: "rojo", "XL"
+  id?: string;
+  type: string;
+  value: string;
 }
 
 export interface PriceList {
   id?: string;
-  name: string; // ejemplo: "Retail", "Mayoreo"
+  name: string;
   price: number;
 }
 
 export interface Product {
   id?: string;
-  userId?: string; // opcional al crear
+  userId?: string;
   name: string;
   type: "producto" | "servicio";
   barcode?: string;
@@ -38,6 +37,9 @@ export interface Product {
   iva?: number;
   ieps?: number;
   satUnitKey?: string;
+  ivaIncluded: boolean; // Nuevo campo
+  createdAt?: Date;
+  updatedAt?: Date;
 
   variants?: Variant[];
   priceLists?: PriceList[];

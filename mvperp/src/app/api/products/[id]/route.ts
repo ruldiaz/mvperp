@@ -4,17 +4,22 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params;
+
     const product = await prisma.product.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
-    if (!product)
+
+    if (!product) {
       return NextResponse.json(
         { error: "Producto no encontrado" },
         { status: 404 }
       );
+    }
+
     return NextResponse.json({ product });
   } catch (error) {
     console.log(error);
@@ -27,18 +32,19 @@ export async function GET(
 
 export async function PUT(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params;
     const data = await req.json();
 
-    // Filtramos undefined para no romper Prisma
+    // Filtrar undefined
     const safeData = Object.fromEntries(
       Object.entries(data).filter(([_, v]) => v !== undefined)
     );
 
     const updatedProduct = await prisma.product.update({
-      where: { id: params.id },
+      where: { id },
       data: safeData,
     });
 
@@ -54,12 +60,15 @@ export async function PUT(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params;
+
     const deleted = await prisma.product.delete({
-      where: { id: params.id },
+      where: { id },
     });
+
     return NextResponse.json({ message: "Producto borrado", product: deleted });
   } catch (error) {
     console.log(error);
