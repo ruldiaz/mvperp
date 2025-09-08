@@ -31,7 +31,7 @@ async function verifyAuth(request: NextRequest) {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await verifyAuth(request);
@@ -42,8 +42,11 @@ export async function GET(
       );
     }
 
+    // Await params antes de usarlos
+    const { id } = await params;
+
     const customer = await prisma.customer.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         sales: {
           include: {
@@ -82,7 +85,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await verifyAuth(request);
@@ -93,10 +96,13 @@ export async function PUT(
       );
     }
 
+    // Await params antes de usarlos
+    const { id } = await params;
+
     const body: UpdateCustomerRequest = await request.json();
 
     const customer = await prisma.customer.update({
-      where: { id: params.id },
+      where: { id },
       data: body,
     });
 
@@ -112,7 +118,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await verifyAuth(request);
@@ -123,9 +129,12 @@ export async function DELETE(
       );
     }
 
+    // Await params antes de usarlos
+    const { id } = await params;
+
     // Check if customer has sales
     const salesCount = await prisma.sale.count({
-      where: { customerId: params.id },
+      where: { customerId: id },
     });
 
     if (salesCount > 0) {
@@ -136,7 +145,7 @@ export async function DELETE(
     }
 
     await prisma.customer.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ message: "Customer deleted successfully" });

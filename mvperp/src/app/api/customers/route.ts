@@ -92,6 +92,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// src/app/api/customers/route.ts (POST method)
 export async function POST(request: NextRequest) {
   const authResult = await verifyAuth(request);
   if ("error" in authResult) {
@@ -105,7 +106,26 @@ export async function POST(request: NextRequest) {
     const body: CreateCustomerRequest = await request.json();
 
     const customer = await prisma.customer.create({
-      data: body,
+      data: {
+        name: body.name,
+        razonSocial: body.razonSocial,
+        email: body.email,
+        phone: body.phone,
+        address: body.address,
+        rfc: body.rfc,
+        usoCFDI: body.usoCFDI,
+        taxRegime: body.taxRegime,
+        fiscalAddress: body.fiscalAddress,
+        fiscalStreet: body.fiscalStreet,
+        fiscalExteriorNumber: body.fiscalExteriorNumber,
+        fiscalInteriorNumber: body.fiscalInteriorNumber,
+        fiscalNeighborhood: body.fiscalNeighborhood,
+        fiscalPostalCode: body.fiscalPostalCode,
+        fiscalCity: body.fiscalCity,
+        fiscalState: body.fiscalState,
+        fiscalMunicipality: body.fiscalMunicipality,
+        fiscalCountry: body.fiscalCountry,
+      },
     });
 
     return NextResponse.json({ customer }, { status: 201 });

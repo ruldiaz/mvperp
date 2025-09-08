@@ -143,13 +143,16 @@ export default function Customers() {
                   Nombre
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  RFC
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Razón Social
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Email
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Teléfono
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  RFC
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Fecha de Registro
@@ -171,13 +174,18 @@ export default function Customers() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-gray-600">{customer.rfc || "-"}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-gray-600">
+                      {customer.razonSocial || "-"}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-gray-600">{customer.email || "-"}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-gray-600">{customer.phone || "-"}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-gray-600">{customer.rfc || "-"}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-gray-600">
@@ -255,7 +263,7 @@ export default function Customers() {
   );
 }
 
-// Componente Modal para crear cliente
+// src/app/dashboard/customers/page.tsx (CustomerModal component)
 function CustomerModal({
   onClose,
   onCustomerCreated,
@@ -265,13 +273,27 @@ function CustomerModal({
 }) {
   const [form, setForm] = useState({
     name: "",
+    razonSocial: "",
     email: "",
     phone: "",
     address: "",
     rfc: "",
+    usoCFDI: "",
+    taxRegime: "",
+    fiscalAddress: "",
+    fiscalStreet: "",
+    fiscalExteriorNumber: "",
+    fiscalInteriorNumber: "",
+    fiscalNeighborhood: "",
+    fiscalPostalCode: "",
+    fiscalCity: "",
+    fiscalState: "",
+    fiscalMunicipality: "",
+    fiscalCountry: "México",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showFiscalInfo, setShowFiscalInfo] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -303,13 +325,17 @@ function CustomerModal({
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
+  ) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center p-6 border-b">
           <h2 className="text-xl font-bold text-gray-800">Agregar Cliente</h2>
           <button
@@ -328,6 +354,7 @@ function CustomerModal({
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            {/* Información Básica */}
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Nombre del Cliente *
@@ -340,6 +367,21 @@ function CustomerModal({
                 required
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Ingrese el nombre del cliente"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Razón Social (Nombre Fiscal) *
+              </label>
+              <input
+                type="text"
+                name="razonSocial"
+                value={form.razonSocial}
+                onChange={handleChange}
+                required
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Razón social para facturación"
               />
             </div>
 
@@ -371,33 +413,309 @@ function CustomerModal({
               />
             </div>
 
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Dirección
-              </label>
-              <input
-                type="text"
-                name="address"
-                value={form.address}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Dirección completa"
-              />
-            </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                RFC
+                RFC *
               </label>
               <input
                 type="text"
                 name="rfc"
                 value={form.rfc}
                 onChange={handleChange}
+                required
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="XAXX010101000"
               />
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Uso de CFDI *
+              </label>
+              <select
+                name="usoCFDI"
+                value={form.usoCFDI}
+                onChange={handleChange}
+                required
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Seleccionar uso de CFDI</option>
+                <option value="G01">Adquisición de mercancías</option>
+                <option value="G02">
+                  Devoluciones, descuentos o bonificaciones
+                </option>
+                <option value="G03">Gastos en general</option>
+                <option value="I01">Construcciones</option>
+                <option value="I02">Mobiliario y equipo de oficina</option>
+                <option value="I03">Equipo de transporte</option>
+                <option value="I04">Equipo de cómputo y accesorios</option>
+                <option value="I05">
+                  Dados, troqueles, moldes, matrices y herramental
+                </option>
+                <option value="I06">Comunicaciones telefónicas</option>
+                <option value="I07">Comunicaciones satelitales</option>
+                <option value="I08">Otra maquinaria y equipo</option>
+                <option value="D01">
+                  Honorarios médicos, dentales y gastos hospitalarios
+                </option>
+                <option value="D02">
+                  Gastos médicos por incapacidad o discapacidad
+                </option>
+                <option value="D03">Gastos funerales</option>
+                <option value="D04">Donativos</option>
+                <option value="D05">
+                  Intereses reales efectivamente pagados por créditos
+                  hipotecarios
+                </option>
+                <option value="D06">Aportaciones voluntarias al SAR</option>
+                <option value="D07">
+                  Primas por seguros de gastos médicos
+                </option>
+                <option value="D08">Gastos de transportación escolar</option>
+                <option value="D09">Depósitos en cuentas para el ahorro</option>
+                <option value="D10">Pagos por servicios educativos</option>
+                <option value="S01">Sin efectos fiscales</option>
+              </select>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Régimen Fiscal *
+              </label>
+              <select
+                name="taxRegime"
+                value={form.taxRegime}
+                onChange={handleChange}
+                required
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Seleccionar régimen fiscal</option>
+                <option value="601">General de Ley Personas Morales</option>
+                <option value="603">
+                  Personas Morales con Fines no Lucrativos
+                </option>
+                <option value="605">
+                  Sueldos y Salarios e Ingresos Asimilados a Salarios
+                </option>
+                <option value="606">Arrendamiento</option>
+                <option value="607">
+                  Régimen de Enajenación o Adquisición de Bienes
+                </option>
+                <option value="608">Demás ingresos</option>
+                <option value="609">Consolidación</option>
+                <option value="610">
+                  Residentes en el Extranjero sin Establecimiento Permanente en
+                  México
+                </option>
+                <option value="611">
+                  Ingresos por Dividendos (socios y accionistas)
+                </option>
+                <option value="612">
+                  Personas Físicas con Actividades Empresariales y Profesionales
+                </option>
+                <option value="614">Ingresos por intereses</option>
+                <option value="615">
+                  Régimen de los ingresos por obtención de premios
+                </option>
+                <option value="616">Sin obligaciones fiscales</option>
+                <option value="620">
+                  Sociedades Cooperativas de Producción que optan por diferir
+                  sus ingresos
+                </option>
+                <option value="621">Incorporación Fiscal</option>
+                <option value="622">
+                  Actividades Agrícolas, Ganaderas, Silvícolas y Pesqueras
+                </option>
+                <option value="623">Opcional para Grupos de Sociedades</option>
+                <option value="624">Coordinados</option>
+                <option value="625">
+                  Régimen de las Actividades Empresariales con ingresos a través
+                  de Plataformas Tecnológicas
+                </option>
+                <option value="626">Régimen Simplificado de Confianza</option>
+              </select>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Dirección de Contacto
+              </label>
+              <textarea
+                name="address"
+                value={form.address}
+                onChange={handleChange}
+                rows={2}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Dirección de contacto del cliente"
+              />
+            </div>
+
+            {/* Información Fiscal Detallada */}
+            <div className="md:col-span-2">
+              <div className="border-t pt-4 mt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowFiscalInfo(!showFiscalInfo)}
+                  className="flex items-center gap-2 text-blue-600 hover:text-blue-800 text-sm font-medium"
+                >
+                  {showFiscalInfo ? (
+                    <span>▲ Ocultar información fiscal detallada</span>
+                  ) : (
+                    <span>▼ Mostrar información fiscal detallada</span>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {showFiscalInfo && (
+              <>
+                <div className="md:col-span-2">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-3">
+                    Domicilio Fiscal
+                  </h3>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Domicilio Fiscal Completo
+                  </label>
+                  <textarea
+                    name="fiscalAddress"
+                    value={form.fiscalAddress}
+                    onChange={handleChange}
+                    rows={2}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Domicilio fiscal completo"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Calle
+                  </label>
+                  <input
+                    type="text"
+                    name="fiscalStreet"
+                    value={form.fiscalStreet}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Nombre de la calle"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Número Exterior
+                  </label>
+                  <input
+                    type="text"
+                    name="fiscalExteriorNumber"
+                    value={form.fiscalExteriorNumber}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="123"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Número Interior
+                  </label>
+                  <input
+                    type="text"
+                    name="fiscalInteriorNumber"
+                    value={form.fiscalInteriorNumber}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="A"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Colonia
+                  </label>
+                  <input
+                    type="text"
+                    name="fiscalNeighborhood"
+                    value={form.fiscalNeighborhood}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Nombre de la colonia"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Código Postal
+                  </label>
+                  <input
+                    type="text"
+                    name="fiscalPostalCode"
+                    value={form.fiscalPostalCode}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="01000"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Ciudad
+                  </label>
+                  <input
+                    type="text"
+                    name="fiscalCity"
+                    value={form.fiscalCity}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Ciudad de México"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Estado
+                  </label>
+                  <input
+                    type="text"
+                    name="fiscalState"
+                    value={form.fiscalState}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Ciudad de México"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Municipio/Alcaldía
+                  </label>
+                  <input
+                    type="text"
+                    name="fiscalMunicipality"
+                    value={form.fiscalMunicipality}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Benito Juárez"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    País
+                  </label>
+                  <input
+                    type="text"
+                    name="fiscalCountry"
+                    value={form.fiscalCountry}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="México"
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t">
