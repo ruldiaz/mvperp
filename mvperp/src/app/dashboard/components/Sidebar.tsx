@@ -31,6 +31,12 @@ const menuItems = [
     icon: "🏢",
   },
   {
+    id: "facturas",
+    path: "/dashboard/invoices",
+    label: "FACTURAS",
+    icon: "🧾", // Nuevo ítem para facturas
+  },
+  {
     id: "perfil",
     path: "/dashboard/profile",
     label: "PERFIL FISCAL",
