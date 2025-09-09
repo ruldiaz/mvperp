@@ -42,6 +42,13 @@ function EditSupplierModal({
     setLoading(true);
     setError("");
 
+    // Validación de RFC
+    if (form.rfc && !/^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$/.test(form.rfc)) {
+      setError("El formato del RFC no es válido");
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch(`/api/suppliers/${supplier.id}`, {
         method: "PUT",
@@ -233,6 +240,8 @@ function EditSupplierModal({
                 value={form.rfc}
                 onChange={handleChange}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                pattern="[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}"
+                title="Formato de RFC válido: 3-4 letras, 6 dígitos, 3 caracteres alfanuméricos"
               />
             </div>
           </div>
@@ -291,7 +300,14 @@ export default function SupplierDetailsPage() {
       }
 
       const data = await res.json();
-      setSupplier(data.supplier);
+
+      // Asegurarnos de que purchases siempre sea un array
+      const supplierData = {
+        ...data.supplier,
+        purchases: data.supplier.purchases || [],
+      };
+
+      setSupplier(supplierData);
     } catch (err) {
       console.error("Error fetching supplier:", err);
       setError(err instanceof Error ? err.message : "Error desconocido");
@@ -325,7 +341,13 @@ export default function SupplierDetailsPage() {
   };
 
   const handleEdit = (updatedSupplier: SupplierDetailsType) => {
-    setSupplier(updatedSupplier);
+    // Asegurarnos de que purchases siempre sea un array
+    const supplierData = {
+      ...updatedSupplier,
+      purchases: updatedSupplier.purchases || [],
+    };
+
+    setSupplier(supplierData);
     setShowEditModal(false);
   };
 
@@ -380,9 +402,11 @@ export default function SupplierDetailsPage() {
     );
   }
 
+  // Asegurarnos de que purchases siempre tenga un valor por defecto
+  const purchases = supplier.purchases || [];
+
   return (
     <div className="container mx-auto px-4 py-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <div>
           <Link
@@ -413,7 +437,6 @@ export default function SupplierDetailsPage() {
         </div>
       </div>
 
-      {/* Información del proveedor */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">
@@ -476,7 +499,6 @@ export default function SupplierDetailsPage() {
         </div>
       </div>
 
-      {/* Dirección */}
       {(supplier.street ||
         supplier.neighborhood ||
         supplier.city ||
@@ -528,15 +550,14 @@ export default function SupplierDetailsPage() {
         </div>
       )}
 
-      {/* Historial de compras */}
       <div className="bg-white rounded-lg shadow">
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-800">
-            Últimas Compras ({supplier.purchases.length})
+            Últimas Compras ({purchases.length})
           </h2>
         </div>
 
-        {supplier.purchases.length > 0 ? (
+        {purchases.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
@@ -556,27 +577,28 @@ export default function SupplierDetailsPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {supplier.purchases.map((purchase) => (
+                {purchases.map((purchase) => (
                   <tr key={purchase.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       {formatDate(purchase.date)}
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-gray-900">
-                        {purchase.purchaseItems.length} producto(s)
+                        {purchase.purchaseItems?.length || 0} producto(s)
                       </div>
                       <div className="text-sm text-gray-500">
                         {purchase.purchaseItems
-                          .slice(0, 2)
+                          ?.slice(0, 2)
                           .map((item, index) => (
                             <span key={item.id}>
-                              {item.product.name}
+                              {item.product?.name || "Producto desconocido"}
                               {index <
-                                purchase.purchaseItems.slice(0, 2).length - 1 &&
-                                ", "}
+                                (purchase.purchaseItems?.slice(0, 2).length ||
+                                  0) -
+                                  1 && ", "}
                             </span>
                           ))}
-                        {purchase.purchaseItems.length > 2 && "..."}
+                        {(purchase.purchaseItems?.length || 0) > 2 && "..."}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -613,7 +635,6 @@ export default function SupplierDetailsPage() {
         )}
       </div>
 
-      {/* Modal de edición */}
       {showEditModal && (
         <EditSupplierModal
           supplier={supplier}

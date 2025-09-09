@@ -11,14 +11,11 @@ interface JwtPayload {
   name?: string;
 }
 
-interface Params {
-  params: {
-    id: string;
-  };
-}
-
 // GET /api/suppliers/[id] - Obtener un proveedor específico
-export async function GET(req: NextRequest, { params }: Params) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     // Verificar autenticación
     if (!JWT_SECRET) {
@@ -44,7 +41,7 @@ export async function GET(req: NextRequest, { params }: Params) {
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     const supplier = await prisma.supplier.findUnique({
       where: { id },
@@ -88,7 +85,10 @@ export async function GET(req: NextRequest, { params }: Params) {
 }
 
 // PUT /api/suppliers/[id] - Actualizar un proveedor
-export async function PUT(req: NextRequest, { params }: Params) {
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     // Verificar autenticación
     if (!JWT_SECRET) {
@@ -114,7 +114,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
     const body = await req.json();
 
     // Validaciones básicas
@@ -166,7 +166,10 @@ export async function PUT(req: NextRequest, { params }: Params) {
 }
 
 // DELETE /api/suppliers/[id] - Eliminar un proveedor
-export async function DELETE(req: NextRequest, { params }: Params) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     // Verificar autenticación
     if (!JWT_SECRET) {
@@ -192,7 +195,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     // Verificar que el proveedor existe
     const existingSupplier = await prisma.supplier.findUnique({

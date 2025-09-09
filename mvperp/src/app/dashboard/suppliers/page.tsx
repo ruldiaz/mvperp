@@ -4,16 +4,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-
-interface Supplier {
-  id: string;
-  name: string;
-  contactName?: string;
-  phone?: string;
-  email?: string;
-  totalPurchases: number;
-  lastPurchase?: string;
-}
+import { Supplier } from "@/types/supplier";
 
 interface PaginationInfo {
   page: number;
@@ -36,7 +27,6 @@ export default function Suppliers() {
   const [error, setError] = useState("");
   const router = useRouter();
 
-  // Cargar proveedores con debounce para búsqueda
   const fetchSuppliers = useCallback(
     async (page = 1, search = "") => {
       try {
@@ -217,7 +207,6 @@ export default function Suppliers() {
         )}
       </div>
 
-      {/* Paginación */}
       {pagination.totalPages > 1 && (
         <div className="flex justify-center items-center gap-2 mt-6">
           <button
@@ -242,7 +231,6 @@ export default function Suppliers() {
         </div>
       )}
 
-      {/* Modal para crear proveedor */}
       {showModal && (
         <SupplierModal
           onClose={() => setShowModal(false)}
@@ -253,7 +241,6 @@ export default function Suppliers() {
   );
 }
 
-// Componente Modal mejorado
 function SupplierModal({
   onClose,
   onSupplierCreated,
@@ -281,6 +268,13 @@ function SupplierModal({
     e.preventDefault();
     setLoading(true);
     setError("");
+
+    // Validación de RFC
+    if (form.rfc && !/^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$/.test(form.rfc)) {
+      setError("El formato del RFC no es válido");
+      setLoading(false);
+      return;
+    }
 
     try {
       const res = await fetch("/api/suppliers", {
@@ -484,6 +478,8 @@ function SupplierModal({
                 onChange={handleChange}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="XAXX010101000"
+                pattern="[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}"
+                title="Formato de RFC válido: 3-4 letras, 6 dígitos, 3 caracteres alfanuméricos"
               />
             </div>
           </div>
