@@ -251,6 +251,8 @@ model Invoice {
   company     Company  @relation(fields: [companyId], references: [id])
 
   uuid        String?  // Folio fiscal SAT
+  facturamaId String?  // 👈 NUEVO: ID interno de Facturama para PDF
+  stampedAt   DateTime? // 👈 Fecha de timbrado - AGREGAR ESTE CAMPO
   serie       String?
   folio       String?
   status      String   @default("pending") // pending, stamped, cancelled
