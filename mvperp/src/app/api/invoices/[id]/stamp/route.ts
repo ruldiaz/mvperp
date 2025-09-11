@@ -93,6 +93,14 @@ export async function POST(
     const customerZipCode = invoice.customer.fiscalPostalCode || "00000";
 
     const facturamaData = {
+      // 👇 NUEVO: Agregar sección Issuer con datos de TU EMPRESA
+      Issuer: {
+        Rfc: invoice.company.rfc,
+        Name: invoice.company.name,
+        FiscalRegime: invoice.company.regime,
+      },
+
+      // 👇 EXISTENTE: Receptor (cliente)
       Receiver: {
         Name: invoice.customer.razonSocial || invoice.customer.name,
         CfdiUse: invoice.cfdiUse || getDefaultCfdiUse(customerTaxRegime),
@@ -100,6 +108,7 @@ export async function POST(
         FiscalRegime: customerTaxRegime,
         TaxZipCode: customerZipCode,
       },
+
       CfdiType: "I",
       NameId: "1",
       ExpeditionPlace: validateExpeditionPlaceForRfc(
@@ -171,6 +180,15 @@ export async function POST(
         pdfError.message
       );
       // No es error crítico, el PDF se puede obtener después
+    }
+
+    // Verificación adicional para evitar errores
+    const issuerRfc = invoice.company.rfc;
+    const receiverRfc = customerRfc;
+
+    // Asegurarse de que los RFCs no sean iguales
+    if (issuerRfc === receiverRfc) {
+      console.warn("⚠️ ADVERTENCIA: RFC del emisor y receptor son iguales");
     }
 
     // Actualizar la factura en la base de datos - guardar ambos IDs
