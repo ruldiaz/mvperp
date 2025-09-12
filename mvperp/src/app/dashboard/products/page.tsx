@@ -1,3 +1,4 @@
+// dashboard/products/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -105,6 +106,12 @@ export default function Products() {
             onClick={() => router.push("/dashboard/products/create")}
           >
             Crear producto
+          </button>
+          <button
+            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+            onClick={() => router.push("/dashboard/products/import")}
+          >
+            Importar CSV
           </button>
         </div>
       </div>

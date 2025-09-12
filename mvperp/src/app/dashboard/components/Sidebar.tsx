@@ -1,6 +1,7 @@
 // app/dashboard/components/Sidebar.tsx
 "use client";
 
+import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 
 interface SidebarProps {
@@ -61,8 +62,9 @@ export default function Sidebar({ setSelectedPage }: SidebarProps) {
       </div>
 
       {menuItems.map((item) => (
-        <div
+        <Link
           key={item.id}
+          href={item.path}
           onClick={() => handleNavigation(item.path, item.id)}
           className={`cursor-pointer p-3 rounded-lg flex items-center gap-3 transition-colors ${
             pathname === item.path
@@ -72,7 +74,7 @@ export default function Sidebar({ setSelectedPage }: SidebarProps) {
         >
           <span className="text-lg">{item.icon}</span>
           <span>{item.label}</span>
-        </div>
+        </Link>
       ))}
     </aside>
   );

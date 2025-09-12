@@ -1,0 +1,3 @@
+name,type,sku,barcode,category,brand,description,price,cost,stock,useStock,sellAtPOS,includeInCatalog,requirePrescription,saleUnit,location,minimumQuantity,satKey,satUnitKey,iva,ieps,ivaIncluded
+Producto Ejemplo,producto,SKU123,123456789,Electrónicos,Marca Ejemplo,Descripción del producto,100.50,75.25,50,true,true,false,false,Pieza,Estante A,10,85121700,H87,16,0,true
+Servicio Ejemplo,servicio,SKU456,,Servicios,,Descripción del servicio,200.00,0.00,0,false,true,true,false,Hora,,5,85121800,H87,16,0,true
