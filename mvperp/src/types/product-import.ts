@@ -1,6 +1,7 @@
+// src/types/product-import.ts
 export interface CSVProduct {
   name: string;
-  type: string;
+  type?: string;
   barcode?: string;
   category?: string;
   sku?: string;

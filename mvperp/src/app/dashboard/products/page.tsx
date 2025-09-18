@@ -1,4 +1,3 @@
-// dashboard/products/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -18,65 +17,99 @@ export default function Products() {
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const router = useRouter();
 
   // Cargar productos
   useEffect(() => {
     const fetchProducts = async () => {
       try {
+        setIsLoading(true);
         const res = await fetch("/api/products", { credentials: "include" });
         if (!res.ok) throw new Error("Error al cargar los productos");
         const data = await res.json();
-        setProducts(data.products);
-        setFilteredProducts(data.products);
+        setProducts(data.products || []);
+        setFilteredProducts(data.products || []);
       } catch (err) {
         console.error(err);
+        alert("Error al cargar los productos");
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchProducts();
   }, []);
 
-  // Filtrar productos cuando cambia el término de búsqueda
+  // Filtrar productos
   useEffect(() => {
     if (!searchTerm) {
       setFilteredProducts(products);
     } else {
       const term = searchTerm.toLowerCase();
-      const filtered = products.filter(
-        (product) =>
-          product.name.toLowerCase().includes(term) ||
-          (product.sku && product.sku.toLowerCase().includes(term))
+      setFilteredProducts(
+        products.filter(
+          (p) =>
+            p.name.toLowerCase().includes(term) ||
+            (p.sku && p.sku.toLowerCase().includes(term)) ||
+            (p.category && p.category.toLowerCase().includes(term))
+        )
       );
-      setFilteredProducts(filtered);
     }
+    setCurrentPage(1);
   }, [searchTerm, products]);
 
-  // Checkbox individual
+  // Paginación
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredProducts.slice(
+    indexOfFirstItem,
+    indexOfLastItem
+  );
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+
   const handleCheckbox = (id: string) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   };
 
-  // Borrar productos seleccionados
-  const handleDeleteSelected = async () => {
-    if (!confirm("¿Seguro que quieres borrar los productos seleccionados?"))
-      return;
+  const handleSelectAll = () => {
+    const currentPageIds = currentItems.map((p) => p.id);
+    if (currentPageIds.every((id) => selectedIds.includes(id))) {
+      setSelectedIds((prev) =>
+        prev.filter((id) => !currentPageIds.includes(id))
+      );
+    } else {
+      setSelectedIds((prev) => [...new Set([...prev, ...currentPageIds])]);
+    }
+  };
 
+  const handleDeleteSelected = async () => {
+    if (
+      !confirm(`¿Seguro que quieres borrar ${selectedIds.length} producto(s)?`)
+    )
+      return;
     try {
-      for (const id of selectedIds) {
-        const res = await fetch(`/api/products/${id}`, {
+      const deletePromises = selectedIds.map((id) =>
+        fetch(`/api/products/${id}`, {
           method: "DELETE",
           credentials: "include",
-        });
-        if (!res.ok) throw new Error("Error al borrar producto");
-      }
-
+        })
+      );
+      const results = await Promise.allSettled(deletePromises);
+      const failed = results.filter(
+        (r) => r.status === "rejected" || !("value" in r && r.value.ok)
+      );
+      if (failed.length > 0)
+        throw new Error(`${failed.length} productos no se pudieron borrar`);
       setProducts((prev) => prev.filter((p) => !selectedIds.includes(p.id)));
       setSelectedIds([]);
+      alert("Productos borrados exitosamente");
     } catch (err) {
       console.error(err);
-      alert("No se pudieron borrar los productos seleccionados");
+      alert("Error al borrar algunos productos");
     }
   };
 
@@ -84,12 +117,59 @@ export default function Products() {
     router.push(`/dashboard/products/${id}`);
   };
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setSearchTerm(e.target.value);
+  const handleItemsPerPageChange = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    setItemsPerPage(Number(e.target.value));
+    setCurrentPage(1);
+  };
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages) setCurrentPage(page);
   };
 
+  const getPageNumbers = () => {
+    const pageNumbers = [];
+    const maxVisiblePages = 5;
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) pageNumbers.push(i);
+        pageNumbers.push("...");
+        pageNumbers.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pageNumbers.push(1);
+        pageNumbers.push("...");
+        for (let i = totalPages - 3; i <= totalPages; i++) pageNumbers.push(i);
+      } else {
+        pageNumbers.push(1);
+        pageNumbers.push("...");
+        for (let i = currentPage - 1; i <= currentPage + 1; i++)
+          pageNumbers.push(i);
+        pageNumbers.push("...");
+        pageNumbers.push(totalPages);
+      }
+    }
+    return pageNumbers;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="p-4">
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-2xl font-bold">Productos</h1>
+          <div className="animate-pulse bg-gray-300 h-10 w-32 rounded"></div>
+        </div>
+        <div className="animate-pulse bg-gray-300 h-12 w-full mb-4 rounded"></div>
+        <div className="animate-pulse bg-gray-200 h-64 w-full rounded"></div>
+      </div>
+    );
+  }
+
   return (
-    <div>
+    <div className="p-4">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Productos</h1>
         <div className="flex gap-2">
@@ -98,7 +178,7 @@ export default function Products() {
               onClick={handleDeleteSelected}
               className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
             >
-              Borrar seleccionado{selectedIds.length > 1 ? "s" : ""}
+              Borrar ({selectedIds.length})
             </button>
           )}
           <button
@@ -116,62 +196,162 @@ export default function Products() {
         </div>
       </div>
 
-      {/* Input de búsqueda */}
+      {/* Buscador */}
       <div className="mb-4">
         <input
           type="text"
-          placeholder="Buscar por nombre o SKU..."
+          placeholder="Buscar por nombre, SKU o categoría..."
           value={searchTerm}
           onChange={handleSearchChange}
           className="w-full p-2 border border-gray-300 rounded"
         />
       </div>
 
-      <table className="w-full border-collapse border border-gray-300">
-        <thead>
-          <tr className="bg-gray-200">
-            <th className="border px-4 py-2">{/* Cabecera del checkbox */}</th>
-            <th className="border px-4 py-2">Nombre</th>
-            <th className="border px-4 py-2">SKU</th>
-            <th className="border px-4 py-2">Stock</th>
-            <th className="border px-4 py-2">Categoría</th>
-            <th className="border px-4 py-2">Precio</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredProducts.length > 0 ? (
-            filteredProducts.map((p) => (
-              <tr key={p.id} className="hover:bg-gray-100">
-                <td className="border px-4 py-2 text-center">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.includes(p.id)}
-                    onChange={() => handleCheckbox(p.id)}
-                  />
-                </td>
-                <td
-                  className="border px-4 py-2 cursor-pointer"
-                  onClick={() => goToDetail(p.id)}
-                >
-                  {p.name}
-                </td>
-                <td className="border px-4 py-2">{p.sku || "-"}</td>
-                <td className="border px-4 py-2">{p.stock ?? 0}</td>
-                <td className="border px-4 py-2">{p.category ?? "-"}</td>
-                <td className="border px-4 py-2">{p.price ?? 0}</td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan={6} className="border px-4 py-2 text-center">
-                {searchTerm
-                  ? "No se encontraron productos"
-                  : "No hay productos"}
-              </td>
+      {/* Selector items por página */}
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center gap-2">
+          <span>Mostrar</span>
+          <select
+            value={itemsPerPage}
+            onChange={handleItemsPerPageChange}
+            className="border p-1 rounded"
+          >
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+          </select>
+          <span>productos por página</span>
+        </div>
+        <div className="text-sm text-gray-600">
+          {filteredProducts.length} producto(s){" "}
+          {searchTerm && `para "${searchTerm}"`}
+        </div>
+      </div>
+
+      {/* Tabla */}
+      <div className="overflow-x-auto">
+        <table className="table-auto w-full border border-gray-300 border-collapse">
+          <thead>
+            <tr className="bg-gray-200">
+              <th className="border px-2 py-2 w-12">
+                <input
+                  type="checkbox"
+                  checked={currentItems.every((p) =>
+                    selectedIds.includes(p.id)
+                  )}
+                  onChange={handleSelectAll}
+                />
+              </th>
+              <th className="border px-2 py-2 max-w-[150px]">Nombre</th>
+              <th className="border px-2 py-2 max-w-[100px]">SKU</th>
+              <th className="border px-2 py-2 w-20">Stock</th>
+              <th className="border px-2 py-2 max-w-[120px]">Categoría</th>
+              <th className="border px-2 py-2 w-28">Precio</th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {currentItems.length > 0 ? (
+              currentItems.map((p) => (
+                <tr key={p.id} className="hover:bg-gray-100">
+                  <td className="border px-2 py-2 text-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(p.id)}
+                      onChange={() => handleCheckbox(p.id)}
+                    />
+                  </td>
+                  <td
+                    className="border px-2 py-2 cursor-pointer text-blue-600 hover:underline truncate max-w-[150px]"
+                    onClick={() => goToDetail(p.id)}
+                    title={p.name}
+                  >
+                    {p.name}
+                  </td>
+                  <td
+                    className="border px-2 py-2 truncate max-w-[100px]"
+                    title={p.sku || ""}
+                  >
+                    {p.sku || "-"}
+                  </td>
+                  <td className="border px-2 py-2 text-right w-20">
+                    {p.stock ?? 0}
+                  </td>
+                  <td
+                    className="border px-2 py-2 truncate max-w-[120px]"
+                    title={p.category || ""}
+                  >
+                    {p.category || "-"}
+                  </td>
+                  <td className="border px-2 py-2 text-right w-28">
+                    ${p.price?.toFixed(2) || "0.00"}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={6} className="border px-2 py-2 text-center">
+                  {searchTerm
+                    ? "No se encontraron productos"
+                    : "No hay productos"}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Paginación */}
+      {filteredProducts.length > 0 && (
+        <div className="flex justify-between items-center mt-4">
+          <div className="text-sm text-gray-600">
+            Mostrando {indexOfFirstItem + 1} -{" "}
+            {Math.min(indexOfLastItem, filteredProducts.length)} de{" "}
+            {filteredProducts.length} productos
+          </div>
+          <div className="flex items-center space-x-1">
+            <button
+              onClick={() => goToPage(1)}
+              disabled={currentPage === 1}
+              className="px-3 py-1 border rounded disabled:opacity-50"
+            >
+              &laquo;
+            </button>
+            <button
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="px-3 py-1 border rounded disabled:opacity-50"
+            >
+              &lsaquo;
+            </button>
+            {getPageNumbers().map((page, index) => (
+              <button
+                key={index}
+                onClick={() =>
+                  typeof page === "number" ? goToPage(page) : null
+                }
+                disabled={page === "..."}
+                className={`px-3 py-1 border rounded ${currentPage === page ? "bg-blue-600 text-white" : ""} ${page === "..." ? "cursor-default" : "hover:bg-gray-200"}`}
+              >
+                {page}
+              </button>
+            ))}
+            <button
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 border rounded disabled:opacity-50"
+            >
+              &rsaquo;
+            </button>
+            <button
+              onClick={() => goToPage(totalPages)}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 border rounded disabled:opacity-50"
+            >
+              &raquo;
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

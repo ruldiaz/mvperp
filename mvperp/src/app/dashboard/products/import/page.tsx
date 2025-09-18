@@ -1,6 +1,7 @@
+// src/app/dashboard/products/import/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   CSVProduct,
@@ -48,12 +49,88 @@ export default function ImportProducts() {
   const [isImporting, setIsImporting] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [showMapping, setShowMapping] = useState(false);
+  const [headers, setHeaders] = useState<string[]>([]);
+
+  // Función mejorada para parsear líneas CSV
+  const parseCSVLine = (line: string, delimiter: string): string[] => {
+    // Si es tabulador, es más simple
+    if (delimiter === "\t") {
+      return line.split("\t").map((field) => field.trim());
+    }
+
+    // Para comas y punto y coma, manejar campos entre comillas
+    const result: string[] = [];
+    let currentField = "";
+    let inQuotes = false;
+    let quoteChar = "";
+
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+
+      if ((char === '"' || char === "'") && !inQuotes) {
+        inQuotes = true;
+        quoteChar = char;
+        continue;
+      }
+
+      if (char === quoteChar && inQuotes) {
+        // Verificar si es una comilla escapada (siguiente carácter es también comilla)
+        if (i + 1 < line.length && line[i + 1] === quoteChar) {
+          currentField += char;
+          i++; // Saltar la siguiente comilla
+        } else {
+          inQuotes = false;
+        }
+        continue;
+      }
+
+      if (char === delimiter && !inQuotes) {
+        result.push(currentField.trim());
+        currentField = "";
+        continue;
+      }
+
+      currentField += char;
+    }
+
+    // Añadir el último campo
+    result.push(currentField.trim());
+    return result;
+  };
+
+  // Obtener valor basado en el mapeo
+  const getValueByMapping = (
+    field: keyof FieldMapping,
+    values: string[],
+    headers: string[],
+    config: CSVImportConfig
+  ): string => {
+    const columnName = config.mapping[field];
+
+    if (config.hasHeaders && headers.length > 0) {
+      const index = headers.findIndex(
+        (h) => h.toLowerCase().trim() === columnName.toLowerCase().trim()
+      );
+      return index >= 0 && index < values.length ? values[index] || "" : "";
+    } else {
+      const index = parseInt(columnName);
+      return !isNaN(index) && index >= 0 && index < values.length
+        ? values[index] || ""
+        : "";
+    }
+  };
+
+  // Reprocesar cuando cambia la configuración
+  useEffect(() => {
+    if (file) {
+      parseCSV(file);
+    }
+  }, [config, file]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       setFile(selectedFile);
-      parseCSV(selectedFile);
     }
   };
 
@@ -61,41 +138,123 @@ export default function ImportProducts() {
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result as string;
-      const lines = text.split("\n");
+      const lines = text.split(/\r?\n/).filter((line) => line.trim());
       const data: CSVProduct[] = [];
 
-      // Determine start index based on headers
+      const detectedHeaders =
+        config.hasHeaders && lines.length > 0
+          ? parseCSVLine(lines[0], config.delimiter)
+          : [];
+
+      setHeaders(detectedHeaders);
+
       const startIndex = config.hasHeaders ? 1 : 0;
 
-      for (let i = startIndex; i < Math.min(lines.length, 6); i++) {
-        // Preview first 5 rows
+      for (
+        let i = startIndex;
+        i < Math.min(lines.length, startIndex + 6);
+        i++
+      ) {
         if (lines[i].trim()) {
-          const values = lines[i].split(config.delimiter);
+          const values = parseCSVLine(lines[i], config.delimiter);
+
           const product: CSVProduct = {
-            name: values[0]?.trim() || "",
-            type: values[1]?.trim() || "producto",
-            barcode: values[2]?.trim(),
-            category: values[3]?.trim(),
-            sku: values[4]?.trim(),
-            sellAtPOS: values[5]?.trim(),
-            includeInCatalog: values[6]?.trim(),
-            requirePrescription: values[7]?.trim(),
-            saleUnit: values[8]?.trim(),
-            brand: values[9]?.trim(),
-            description: values[10]?.trim(),
-            useStock: values[11]?.trim(),
-            quantity: values[12]?.trim(),
-            price: values[13]?.trim(),
-            cost: values[14]?.trim(),
-            stock: values[15]?.trim(),
-            image: values[16]?.trim(),
-            location: values[17]?.trim(),
-            minimumQuantity: values[18]?.trim(),
-            satKey: values[19]?.trim(),
-            iva: values[20]?.trim(),
-            ieps: values[21]?.trim(),
-            satUnitKey: values[22]?.trim(),
-            ivaIncluded: values[23]?.trim(),
+            name: getValueByMapping("name", values, detectedHeaders, config),
+            type:
+              getValueByMapping("type", values, detectedHeaders, config) ||
+              "producto",
+            barcode: getValueByMapping(
+              "barcode",
+              values,
+              detectedHeaders,
+              config
+            ),
+            category: getValueByMapping(
+              "category",
+              values,
+              detectedHeaders,
+              config
+            ),
+            sku: getValueByMapping("sku", values, detectedHeaders, config),
+            sellAtPOS: getValueByMapping(
+              "sellAtPOS",
+              values,
+              detectedHeaders,
+              config
+            ),
+            includeInCatalog: getValueByMapping(
+              "includeInCatalog",
+              values,
+              detectedHeaders,
+              config
+            ),
+            requirePrescription: getValueByMapping(
+              "requirePrescription",
+              values,
+              detectedHeaders,
+              config
+            ),
+            saleUnit: getValueByMapping(
+              "saleUnit",
+              values,
+              detectedHeaders,
+              config
+            ),
+            brand: getValueByMapping("brand", values, detectedHeaders, config),
+            description: getValueByMapping(
+              "description",
+              values,
+              detectedHeaders,
+              config
+            ),
+            useStock: getValueByMapping(
+              "useStock",
+              values,
+              detectedHeaders,
+              config
+            ),
+            quantity: getValueByMapping(
+              "quantity",
+              values,
+              detectedHeaders,
+              config
+            ),
+            price: getValueByMapping("price", values, detectedHeaders, config),
+            cost: getValueByMapping("cost", values, detectedHeaders, config),
+            stock: getValueByMapping("stock", values, detectedHeaders, config),
+            image: getValueByMapping("image", values, detectedHeaders, config),
+            location: getValueByMapping(
+              "location",
+              values,
+              detectedHeaders,
+              config
+            ),
+            minimumQuantity: getValueByMapping(
+              "minimumQuantity",
+              values,
+              detectedHeaders,
+              config
+            ),
+            satKey: getValueByMapping(
+              "satKey",
+              values,
+              detectedHeaders,
+              config
+            ),
+            iva: getValueByMapping("iva", values, detectedHeaders, config),
+            ieps: getValueByMapping("ieps", values, detectedHeaders, config),
+            satUnitKey: getValueByMapping(
+              "satUnitKey",
+              values,
+              detectedHeaders,
+              config
+            ),
+            ivaIncluded: getValueByMapping(
+              "ivaIncluded",
+              values,
+              detectedHeaders,
+              config
+            ),
           };
           data.push(product);
         }
@@ -137,21 +296,27 @@ export default function ImportProducts() {
         credentials: "include",
       });
 
-      if (!response.ok) throw new Error("Error en la importación");
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Error en la importación");
+      }
 
       const resultData: ImportResult = await response.json();
       setResult(resultData);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Import error:", error);
       setResult({
         success: 0,
-        errors: 0,
+        errors: 1,
         details: [
           {
             row: 0,
             productName: "Error",
             status: "error",
-            message: "Error al procesar el archivo",
+            message:
+              error instanceof Error
+                ? error.message
+                : "Error al procesar el archivo",
           },
         ],
       });
@@ -184,7 +349,7 @@ export default function ImportProducts() {
             </label>
             <input
               type="file"
-              accept=".csv"
+              accept=".csv,.txt"
               onChange={handleFileChange}
               className="border p-2 rounded w-full"
             />
@@ -232,6 +397,19 @@ export default function ImportProducts() {
         {showMapping && (
           <div className="mt-4 p-4 border rounded bg-gray-50">
             <h3 className="font-medium mb-3">Mapeo de Campos CSV</h3>
+            <p className="text-sm text-gray-600 mb-3">
+              {config.hasHeaders
+                ? "Ingresa el nombre exacto del encabezado en tu CSV para cada campo"
+                : "Ingresa el número de columna (comenzando desde 0) para cada campo"}
+            </p>
+
+            {config.hasHeaders && headers.length > 0 && (
+              <div className="mb-4 p-2 bg-blue-50 rounded">
+                <p className="text-sm font-medium">Encabezados detectados:</p>
+                <p className="text-sm">{headers.join(", ")}</p>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {Object.entries(config.mapping).map(([field, value]) => (
                 <div key={field}>
@@ -248,6 +426,7 @@ export default function ImportProducts() {
                       )
                     }
                     className="border p-2 rounded w-full text-sm"
+                    placeholder={config.hasHeaders ? "nombre_header" : "0"}
                   />
                 </div>
               ))}
@@ -259,7 +438,7 @@ export default function ImportProducts() {
       {previewData.length > 0 && (
         <div className="bg-white p-6 rounded-lg shadow-md mb-6">
           <h2 className="text-xl font-semibold mb-4">
-            Vista Previa (primeras 5 filas)
+            Vista Previa (primeras {previewData.length} filas)
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse border border-gray-300">
@@ -270,6 +449,7 @@ export default function ImportProducts() {
                   <th className="border px-3 py-2 text-left">SKU</th>
                   <th className="border px-3 py-2 text-left">Precio</th>
                   <th className="border px-3 py-2 text-left">Stock</th>
+                  <th className="border px-3 py-2 text-left">Categoría</th>
                 </tr>
               </thead>
               <tbody>
@@ -280,6 +460,9 @@ export default function ImportProducts() {
                     <td className="border px-3 py-2">{product.sku || "-"}</td>
                     <td className="border px-3 py-2">{product.price || "0"}</td>
                     <td className="border px-3 py-2">{product.stock || "0"}</td>
+                    <td className="border px-3 py-2">
+                      {product.category || "-"}
+                    </td>
                   </tr>
                 ))}
               </tbody>

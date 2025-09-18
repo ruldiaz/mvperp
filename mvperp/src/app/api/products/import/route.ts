@@ -1,3 +1,4 @@
+// src/app/api/products/import/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import jwt from "jsonwebtoken";
@@ -9,6 +10,28 @@ import {
 } from "@/types/product-import";
 
 const JWT_SECRET = process.env.JWT_SECRET;
+
+// Función para parsear números correctamente
+const parseNumber = (value: string): number => {
+  if (!value) return 0;
+  const cleaned = value.replace(/[^\d.,]/g, "");
+  const normalized = cleaned.replace(",", ".");
+  const num = parseFloat(normalized);
+  return isNaN(num) ? 0 : num;
+};
+
+// Función para parsear booleanos
+const parseBoolean = (value: string): boolean => {
+  if (!value) return false;
+  const val = value.toString().toLowerCase().trim();
+  return (
+    val === "true" ||
+    val === "1" ||
+    val === "si" ||
+    val === "sí" ||
+    val === "yes"
+  );
+};
 
 export async function POST(req: NextRequest) {
   if (!JWT_SECRET) {
@@ -76,9 +99,12 @@ export async function POST(req: NextRequest) {
       delimiter: config.delimiter,
       skip_empty_lines: true,
       relax_column_count: true,
+      trim: true,
     });
 
+    const headers = config.hasHeaders && records.length > 0 ? records[0] : [];
     const startRow = config.hasHeaders ? 1 : 0;
+
     const result: ImportResult = {
       success: 0,
       errors: 0,
@@ -97,10 +123,26 @@ export async function POST(req: NextRequest) {
       try {
         // Map CSV columns to product fields based on configuration
         const productData: Record<string, string> = {};
+
         Object.entries(config.mapping).forEach(([field, columnName]) => {
-          const columnIndex = Object.values(config.mapping).indexOf(columnName);
+          let columnIndex = -1;
+
+          if (config.hasHeaders && headers.length > 0) {
+            // Buscar por nombre de columna en los headers
+            columnIndex = headers.findIndex(
+              (header) =>
+                header.toLowerCase().trim() === columnName.toLowerCase().trim()
+            );
+          } else {
+            // Si no hay headers, asumir que columnName es el índice
+            columnIndex = parseInt(columnName);
+            if (isNaN(columnIndex)) columnIndex = -1;
+          }
+
           if (columnIndex >= 0 && columnIndex < row.length) {
-            productData[field] = row[columnIndex]?.trim() || "";
+            productData[field] = row[columnIndex] || "";
+          } else {
+            productData[field] = "";
           }
         });
 
@@ -119,43 +161,31 @@ export async function POST(req: NextRequest) {
           barcode: productData.barcode || undefined,
           category: productData.category || undefined,
           sku: productData.sku || undefined,
-          sellAtPOS:
-            productData.sellAtPOS?.toLowerCase() === "true" ||
-            productData.sellAtPOS === "1",
-          includeInCatalog:
-            productData.includeInCatalog?.toLowerCase() === "true" ||
-            productData.includeInCatalog === "1",
-          requirePrescription:
-            productData.requirePrescription?.toLowerCase() === "true" ||
-            productData.requirePrescription === "1",
+          sellAtPOS: parseBoolean(productData.sellAtPOS),
+          includeInCatalog: parseBoolean(productData.includeInCatalog),
+          requirePrescription: parseBoolean(productData.requirePrescription),
           saleUnit: productData.saleUnit || undefined,
           brand: productData.brand || undefined,
           description: productData.description || undefined,
-          useStock:
-            productData.useStock?.toLowerCase() === "true" ||
-            productData.useStock === "1" ||
-            true,
-          quantity: productData.quantity ? parseFloat(productData.quantity) : 0,
-          price: productData.price ? parseFloat(productData.price) : 0,
-          cost: productData.cost ? parseFloat(productData.cost) : 0,
-          stock: productData.stock
-            ? parseFloat(productData.stock)
-            : productData.quantity
-              ? parseFloat(productData.quantity)
-              : 0,
+          useStock: productData.useStock
+            ? parseBoolean(productData.useStock)
+            : true,
+          quantity: parseNumber(productData.quantity),
+          price: parseNumber(productData.price),
+          cost: parseNumber(productData.cost),
+          stock: parseNumber(productData.stock || productData.quantity),
           image: productData.image || undefined,
           location: productData.location || undefined,
           minimumQuantity: productData.minimumQuantity
-            ? parseFloat(productData.minimumQuantity)
+            ? parseNumber(productData.minimumQuantity)
             : undefined,
           satKey: productData.satKey || undefined,
-          iva: productData.iva ? parseFloat(productData.iva) : undefined,
-          ieps: productData.ieps ? parseFloat(productData.ieps) : undefined,
+          iva: productData.iva ? parseNumber(productData.iva) : undefined,
+          ieps: productData.ieps ? parseNumber(productData.ieps) : undefined,
           satUnitKey: productData.satUnitKey || undefined,
-          ivaIncluded:
-            productData.ivaIncluded?.toLowerCase() === "true" ||
-            productData.ivaIncluded === "1" ||
-            true,
+          ivaIncluded: productData.ivaIncluded
+            ? parseBoolean(productData.ivaIncluded)
+            : true,
         };
 
         // Check if product already exists (by SKU or name)
@@ -188,6 +218,7 @@ export async function POST(req: NextRequest) {
         detail.message =
           error instanceof Error ? error.message : "Error desconocido";
         result.errors++;
+        console.error(`Error en fila ${i + 1}:`, error);
       }
 
       result.details.push(detail);
