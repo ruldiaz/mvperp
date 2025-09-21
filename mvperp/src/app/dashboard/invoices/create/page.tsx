@@ -296,6 +296,7 @@ export default function CreateInvoice() {
               <option value="G02">
                 G02 - Devoluciones, descuentos o bonificaciones
               </option>
+              <option value="S01">S01 - Sin efectos fiscales</option>
             </select>
           </div>
         </div>

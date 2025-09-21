@@ -10,6 +10,11 @@ import {
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
+// Add this function near the top, after imports
+function roundToSixDecimals(value: number): number {
+  return Math.round(value * 1000000) / 1000000;
+}
+
 async function verifyAuth(request: NextRequest) {
   if (!JWT_SECRET) {
     return { error: "JWT secret no definido", status: 500 };
@@ -92,6 +97,11 @@ export async function POST(
     const customerTaxRegime = invoice.customer.taxRegime || "616";
     const customerZipCode = invoice.customer.fiscalPostalCode || "00000";
 
+    // Obtener el mes actual en formato de dos dígitos (01-12)
+    const currentMonth = (new Date().getMonth() + 1)
+      .toString()
+      .padStart(2, "0");
+
     const facturamaData = {
       // 👇 NUEVO: Agregar sección Issuer con datos de TU EMPRESA
       Issuer: {
@@ -109,6 +119,16 @@ export async function POST(
         TaxZipCode: customerZipCode,
       },
 
+      // 👇 AGREGAR ESTA SECCIÓN PARA CLIENTES GENÉRICOS
+      GlobalInformation:
+        customerRfc === "XAXX010101000"
+          ? {
+              Periodicity: "04", // Mensual
+              Months: currentMonth, // 👈 Cambiar de "0" a "01", "02", ..., "12"
+              Year: new Date().getFullYear().toString(),
+            }
+          : undefined,
+
       CfdiType: "I",
       NameId: "1",
       ExpeditionPlace: validateExpeditionPlaceForRfc(
@@ -121,31 +141,38 @@ export async function POST(
       PaymentForm: invoice.paymentForm || "01",
       PaymentMethod: invoice.paymentMethod || "PUE",
       Exportation: "01",
-      Items: invoice.invoiceItems.map((item) => ({
-        Quantity: item.quantity,
-        ProductCode: item.saleItem?.product?.satKey || "01010101",
-        UnitCode: item.saleItem?.product?.satUnitKey || "H87",
-        Unit: item.saleItem?.product?.saleUnit || "Pieza",
-        Description:
-          item.saleItem?.description ||
-          item.saleItem?.product?.name ||
-          "Producto o servicio",
-        IdentificationNumber: item.saleItem?.product?.sku || undefined,
-        UnitPrice: item.unitPrice,
-        Subtotal: item.totalPrice,
-        TaxObject: "02",
-        Taxes: [
-          {
-            Name: "IVA",
-            Rate: 0.16,
-            Total: item.totalPrice * 0.16,
-            Base: item.totalPrice,
-            IsRetention: false,
-            IsFederalTax: true,
-          },
-        ],
-        Total: item.totalPrice * 1.16,
-      })),
+      // Then in the Items mapping, replace with:
+      Items: invoice.invoiceItems.map((item) => {
+        const subtotal = roundToSixDecimals(item.totalPrice);
+        const taxAmount = roundToSixDecimals(subtotal * 0.16);
+        const total = roundToSixDecimals(subtotal + taxAmount);
+
+        return {
+          Quantity: item.quantity,
+          ProductCode: item.saleItem?.product?.satKey || "01010101",
+          UnitCode: item.saleItem?.product?.satUnitKey || "H87",
+          Unit: item.saleItem?.product?.saleUnit || "Pieza",
+          Description:
+            item.saleItem?.description ||
+            item.saleItem?.product?.name ||
+            "Producto o servicio",
+          IdentificationNumber: item.saleItem?.product?.sku || undefined,
+          UnitPrice: roundToSixDecimals(item.unitPrice),
+          Subtotal: subtotal,
+          TaxObject: "02",
+          Taxes: [
+            {
+              Name: "IVA",
+              Rate: 0.16,
+              Total: taxAmount,
+              Base: subtotal,
+              IsRetention: false,
+              IsFederalTax: true,
+            },
+          ],
+          Total: total,
+        };
+      }),
     };
 
     console.log(

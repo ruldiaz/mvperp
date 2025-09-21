@@ -20,6 +20,13 @@ export interface FacturamaItem {
   Total: number;
 }
 
+// Agrega esta interfaz cerca de las otras interfaces de Facturama
+export interface GlobalInformation {
+  Periodicity: string;
+  Months: string;
+  Year: string;
+}
+
 export interface FacturamaRequest {
   Receiver: {
     Name: string;
@@ -28,6 +35,7 @@ export interface FacturamaRequest {
     FiscalRegime: string;
     TaxZipCode: string;
   };
+  GlobalInformation?: GlobalInformation; // 👈 Agregar esta línea
   CfdiType: string;
   NameId: string;
   ExpeditionPlace: string;
