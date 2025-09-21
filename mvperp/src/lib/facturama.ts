@@ -81,9 +81,21 @@ export interface FacturamaPdfResponse {
   Content: string;
 }
 
+export interface FacturamaCancelRequest {
+  Motivo: string;
+  FolioSustituto?: string;
+}
 export interface FacturamaCancelResponse {
   Status: string;
-  Message?: string;
+  Message: string;
+  IsCancelable: string;
+  Uuid: string;
+  RequestDate: string;
+  ExpirationDate?: string;
+  AcuseXmlBase64?: string;
+  CancelationDate?: string;
+  AcuseStatus: number;
+  AcuseStatusDetails: string;
 }
 
 class FacturamaService {
@@ -175,31 +187,48 @@ class FacturamaService {
     }
   }
 
+  // lib/facturama.ts - Método cancelCfdi CORREGIDO
   async cancelCfdi(
     cfdiId: string,
     motivo: string,
     folioSustituto?: string
   ): Promise<FacturamaCancelResponse> {
-    const response = await fetch(`${this.baseUrl}/3/cfdis/${cfdiId}`, {
+    // 👇 URL CORRECTA según la documentación - ¡NOTA LA DIFERENCIA!
+    // De: /3/cfdis/  →  A: /cfdi/
+    let url = `${this.baseUrl}/cfdi/${cfdiId}?type=issued&motive=${motivo}`;
+
+    // Solo agregar uuidReplacement si se proporciona y el motivo es "01"
+    if (folioSustituto && motivo === "01") {
+      url += `&uuidReplacement=${encodeURIComponent(folioSustituto)}`;
+    }
+
+    console.log(`✅ URL CORRECTA: ${url}`);
+    console.log(
+      `Motivo: ${motivo}, FolioSustituto: ${folioSustituto || "N/A"}`
+    );
+
+    const response = await fetch(url, {
       method: "DELETE",
       headers: {
         Authorization: `Basic ${this.credentials}`,
-        "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        Motivo: motivo,
-        FolioSustituto: folioSustituto || null,
-      }),
     });
+
+    console.log(
+      `Respuesta de cancelación: ${response.status} ${response.statusText}`
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
+      console.error(`Error detallado: ${errorText}`);
       throw new Error(
         `Error canceling CFDI: ${response.status} - ${errorText}`
       );
     }
 
-    return response.json();
+    const result: FacturamaCancelResponse = await response.json();
+    console.log(`✅ Cancelación exitosa:`, result);
+    return result;
   }
 
   // Método adicional para obtener el XML

@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Invoice } from "@/types/invoice";
 import StampInvoiceButton from "@/app/dashboard/components/invoice/StampInvoiceButton";
+import CancelInvoiceButton from "@/app/dashboard/components/invoice/CancelInvoiceButton";
 
 export default function InvoiceDetail() {
   const params = useParams();
@@ -155,7 +156,13 @@ export default function InvoiceDetail() {
             >
               Descargar PDF
             </a>
-
+            <CancelInvoiceButton
+              invoiceId={invoice.id!}
+              onCancelled={() => {
+                // Recargar la página para ver los cambios
+                router.refresh();
+              }}
+            />
             {invoice.verificationUrl && (
               <a
                 href={invoice.verificationUrl}
