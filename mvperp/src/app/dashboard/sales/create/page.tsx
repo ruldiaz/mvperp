@@ -92,7 +92,10 @@ export default function CreateSale() {
   const handleProductChange = (index: number, productId: string) => {
     const product = products.find((p) => p.id === productId);
     const price = product?.price || 0;
-
+    if (product?.stock == 0) {
+      alert(`El producto ${product.name} no tiene existencias`);
+      return;
+    }
     // Actualizar campos con información del producto
     setItems((prevItems) => {
       const newItems = [...prevItems];
@@ -249,7 +252,13 @@ export default function CreateSale() {
                 >
                   <option value="">Seleccionar producto</option>
                   {products.map((product) => (
-                    <option key={product.id} value={product.id}>
+                    <option
+                      key={product.id}
+                      value={product.id}
+                      className={
+                        product.stock === 0 ? "text-red-600" : "text-black"
+                      }
+                    >
                       {product.name} {product.sku && `(${product.sku})`}
                       {product.stock !== undefined &&
                         ` - Stock: ${product.stock}`}
