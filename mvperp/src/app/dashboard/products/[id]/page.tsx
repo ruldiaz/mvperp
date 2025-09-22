@@ -303,7 +303,7 @@ export default function ProductDetail() {
             <div>
               <label className="block text-sm font-medium mb-1">Imagen</label>
               {image ? (
-                <div className="relative w-full h-48 border rounded">
+                <div className="relative w-50 h-48 border rounded">
                   <Image
                     src={image}
                     alt={form?.name || "Imagen del producto"}
