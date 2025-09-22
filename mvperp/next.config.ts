@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  images: {
+    domains: ["www.truper.com"], // habilita cargar imágenes desde este dominio
+  },
 };
 
 export default nextConfig;

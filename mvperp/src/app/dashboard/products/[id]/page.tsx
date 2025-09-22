@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Product, Variant, PriceList } from "@/types/product";
+import Image from "next/image"; // Import the Image component
 
 export default function ProductDetail() {
   const router = useRouter();
@@ -11,6 +12,7 @@ export default function ProductDetail() {
   const productId = params.id as string;
 
   const [form, setForm] = useState<Product | null>(null);
+  const [image, setImage] = useState("");
   const [originalForm, setOriginalForm] = useState<Product | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -25,6 +27,20 @@ export default function ProductDetail() {
     price: 0,
   });
 
+  // Función para cargar imagen
+  const fetchImage = async (imageKey: string) => {
+    try {
+      const res = await fetch(`/api/proxyImage?imageKey=${imageKey}`);
+      if (!res.ok) throw new Error("Error al cargar la imagen");
+      const data = await res.json();
+      console.log(data);
+      setImage(data.imageUrl);
+    } catch (error) {
+      console.error(error);
+      setError("No se pudo cargar la imagen");
+    }
+  };
+
   // Cargar producto
   useEffect(() => {
     const fetchProduct = async () => {
@@ -36,6 +52,10 @@ export default function ProductDetail() {
         const data = await res.json();
         setForm(data.product);
         setOriginalForm(data.product);
+        // Cargar imagen después de tener los datos del producto
+        if (data.product.sku) {
+          fetchImage(data.product.sku);
+        }
       } catch (err) {
         console.error(err);
         setError("No se pudo cargar el producto");
@@ -280,6 +300,32 @@ export default function ProductDetail() {
         <div className="md:col-span-2 bg-white p-4 rounded shadow">
           <h2 className="text-xl font-semibold mb-4">Información Básica</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Imagen</label>
+              {image ? (
+                <div className="relative w-full h-48 border rounded">
+                  <Image
+                    src={image}
+                    alt={form?.name || "Imagen del producto"}
+                    fill
+                    className="object-contain p-2"
+                    onError={() => {
+                      // Cambiar a placeholder si falla la imagen
+                      setImage("/placeholder-image.png");
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="w-full h-48 bg-gray-200 flex items-center justify-center border rounded">
+                  <span className="text-gray-500">Imagen no disponible</span>
+                </div>
+              )}
+              {isEditing && form?.sku && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Imagen cargada usando SKU: {form.sku}
+                </p>
+              )}
+            </div>
             <div>
               <label className="block text-sm font-medium mb-1">
                 Nombre del producto *
