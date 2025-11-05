@@ -11,6 +11,27 @@ export interface PriceList {
   price: number;
 }
 
+// Agrega esta interfaz para QuotationItem
+export interface QuotationItem {
+  id?: string;
+  quotationId?: string;
+  productId: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  satProductKey?: string;
+  satUnitKey?: string;
+  description?: string;
+
+  // Relaciones
+  product?: Product;
+  quotation?: {
+    id?: string;
+    customerId?: string;
+    date?: Date | string;
+  };
+}
+
 export interface Product {
   id?: string;
   userId?: string;
@@ -43,4 +64,5 @@ export interface Product {
 
   variants?: Variant[];
   priceLists?: PriceList[];
+  quotationItems?: QuotationItem[];
 }

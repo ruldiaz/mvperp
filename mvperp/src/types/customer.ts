@@ -1,4 +1,8 @@
 // src/types/customer.ts
+
+import { Quotation } from "./sale";
+import { Sale } from "./sale"; // También necesitas importar Sale
+
 export interface Customer {
   id?: string;
   name: string;
@@ -21,6 +25,8 @@ export interface Customer {
   fiscalCountry?: string;
   createdAt?: Date | string;
   updatedAt?: Date | string;
+  sales?: Sale[];
+  quotations?: Quotation[];
 }
 
 export interface CreateCustomerRequest {

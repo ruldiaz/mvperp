@@ -23,6 +23,7 @@ model User {
   movements   Movement[]  // relación 1:N con movimientos
   purchases   Purchase[]  // relación 1:N con compras
   sales       Sale[]      // relación 1:N con ventas ← AÑADIDO
+  quotations  Quotation[]
 }
 
 model Product {
@@ -61,6 +62,7 @@ model Product {
   movements           Movement[]
   purchaseItems       PurchaseItem[]
   saleItems           SaleItem[]   // ← AÑADIDO
+  quotationItems      QuotationItem[]
 }
 
 model Variant {
@@ -168,6 +170,7 @@ model Customer {
   
   sales       Sale[]   // relación 1:N con ventas
   invoices    Invoice[]
+  quotations  Quotation[]
 }
 
 model Sale {
@@ -289,4 +292,36 @@ model InvoiceItem {
   quantity    Float     // cantidad facturada (puede ser parcial)
   unitPrice   Float
   totalPrice  Float
+}
+
+model Quotation {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customerId  String     @db.Uuid
+  customer    Customer   @relation(fields: [customerId], references: [id])
+  userId      String     @db.Uuid
+  user        User       @relation(fields: [userId], references: [id])
+  date        DateTime   @default(now())
+  expiryDate  DateTime?  // Fecha de vencimiento de la cotización
+  totalAmount Float
+  status      String     @default("pending") // pending, accepted, rejected, expired, converted
+  notes       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  quotationItems QuotationItem[]
+}
+
+model QuotationItem {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  quotationId   String    @db.Uuid
+  quotation     Quotation @relation(fields: [quotationId], references: [id])
+  productId     String    @db.Uuid
+  product       Product   @relation(fields: [productId], references: [id])
+  quantity      Float
+  unitPrice     Float
+  totalPrice    Float
+  satProductKey String?
+  satUnitKey    String?
+  description   String?
+  createdAt     DateTime  @default(now())
 }
