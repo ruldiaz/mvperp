@@ -22,7 +22,6 @@ export default function Suppliers() {
     totalPages: 0,
   });
   const [searchTerm, setSearchTerm] = useState("");
-  const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const router = useRouter();
@@ -72,435 +71,281 @@ export default function Suppliers() {
     router.push(`/dashboard/purchases/create?supplierId=${supplierId}`);
   };
 
-  const handleSupplierCreated = (newSupplier: Supplier) => {
-    setSuppliers((prev) => [newSupplier, ...prev]);
-    setShowModal(false);
-  };
-
   if (loading && suppliers.length === 0) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 flex justify-center items-center">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-8 rounded-2xl border border-gray-200 shadow-sm text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-xl font-semibold text-gray-700">
+            Cargando proveedores...
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-        <h1 className="text-2xl font-bold text-gray-800">Proveedores</h1>
-
-        <div className="flex gap-3 w-full sm:w-auto">
-          <input
-            type="text"
-            placeholder="Buscar proveedores..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 sm:flex-none border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-
-          <button
-            onClick={() => setShowModal(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-          >
-            <span>+</span>
-            <span className="hidden sm:inline">Agregar</span>
-          </button>
+    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
+      {/* Hero Section */}
+      <div className="pt-8 pb-8 px-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-b-2xl shadow-lg">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div>
+              <h1 className="text-4xl font-bold mb-2 leading-tight">
+                Proveedores
+              </h1>
+              <p className="text-xl text-blue-100 max-w-2xl">
+                Gestiona todos tus proveedores en un solo lugar
+              </p>
+            </div>
+            <Link
+              href="/dashboard/suppliers/create"
+              className="mt-4 md:mt-0 bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+            >
+              + Nuevo Proveedor
+            </Link>
+          </div>
         </div>
       </div>
 
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
-        </div>
-      )}
+      {/* Contenido Principal */}
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        {/* Barra de búsqueda y estadísticas */}
+        <div className="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 p-6 rounded-2xl bg-gradient-to-r from-gray-50 to-blue-50 border border-gray-200 shadow-sm">
+            <div className="flex items-center space-x-4">
+              <div className="text-2xl bg-white p-3 rounded-xl shadow-sm">
+                🔍
+              </div>
+              <div className="flex-1">
+                <input
+                  type="text"
+                  placeholder="Buscar por nombre, contacto o RFC..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full p-4 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200"
+                />
+              </div>
+            </div>
+          </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Nombre
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contacto
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Teléfono
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Compras Totales
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Última Compra
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {suppliers.map((supplier) => (
-                <tr
-                  key={supplier.id}
-                  className="hover:bg-gray-50 transition-colors"
-                >
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="font-medium text-gray-900">
-                      {supplier.name}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-gray-600">
-                      {supplier.contactName || "-"}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-gray-600">{supplier.phone || "-"}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-gray-900 font-medium">
-                      $
-                      {supplier.totalPurchases.toLocaleString("es-MX", {
-                        minimumFractionDigits: 2,
-                      })}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-gray-600">
-                      {supplier.lastPurchase
-                        ? new Date(supplier.lastPurchase).toLocaleDateString(
-                            "es-MX"
-                          )
-                        : "-"}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleCreatePurchase(supplier.id)}
-                        className="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 transition-colors text-sm"
-                        title="Realizar compra"
-                      >
-                        Comprar
-                      </button>
-                      <Link
-                        href={`/dashboard/suppliers/${supplier.id}`}
-                        className="bg-gray-600 text-white px-3 py-1 rounded-md hover:bg-gray-700 transition-colors text-sm"
-                        title="Ver detalles"
-                      >
-                        Ver
-                      </Link>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="p-6 rounded-2xl bg-gradient-to-r from-green-50 to-emerald-50 border border-gray-200 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-600 mb-1">Total Proveedores</p>
+                <p className="text-3xl font-bold text-gray-800">
+                  {pagination.totalCount}
+                </p>
+              </div>
+              <div className="text-3xl">🏢</div>
+            </div>
+          </div>
         </div>
 
-        {suppliers.length === 0 && !loading && (
-          <div className="text-center py-8 text-gray-500">
-            No se encontraron proveedores
+        {error && (
+          <div className="mb-8 p-6 rounded-2xl bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 shadow-sm">
+            <div className="flex items-center space-x-4">
+              <div className="text-2xl bg-white p-3 rounded-xl shadow-sm">
+                ⚠️
+              </div>
+              <div className="flex-1">
+                <p className="text-red-600">{error}</p>
+              </div>
+            </div>
           </div>
         )}
-      </div>
 
-      {pagination.totalPages > 1 && (
-        <div className="flex justify-center items-center gap-2 mt-6">
-          <button
-            onClick={() => handlePageChange(pagination.page - 1)}
-            disabled={pagination.page === 1}
-            className="px-3 py-1 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Anterior
-          </button>
+        {/* Tabla de proveedores */}
+        <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300 bg-white">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gradient-to-r from-gray-900 to-gray-800 text-white">
+                  <th className="px-6 py-4 text-left font-semibold">
+                    Proveedor
+                  </th>
+                  <th className="px-6 py-4 text-left font-semibold">
+                    Contacto
+                  </th>
+                  <th className="px-6 py-4 text-left font-semibold">
+                    Teléfono
+                  </th>
+                  <th className="px-6 py-4 text-left font-semibold">
+                    Compras Totales
+                  </th>
+                  <th className="px-6 py-4 text-left font-semibold">
+                    Última Compra
+                  </th>
+                  <th className="px-6 py-4 text-left font-semibold">
+                    Acciones
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {suppliers.map((supplier) => (
+                  <tr
+                    key={supplier.id}
+                    className="border-b border-gray-200 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 group"
+                  >
+                    <td className="px-6 py-4">
+                      <div className="flex items-center">
+                        <div className="bg-white p-2 rounded-lg shadow-sm mr-3 group-hover:shadow-md transition-shadow">
+                          🏢
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-800">
+                            {supplier.name}
+                          </div>
+                          {supplier.rfc && (
+                            <div className="text-sm text-gray-500">
+                              {supplier.rfc}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-gray-700">
+                        {supplier.contactName || "-"}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-gray-700">
+                        {supplier.phone || "-"}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="font-bold text-gray-800">
+                        $
+                        {supplier.totalPurchases.toLocaleString("es-MX", {
+                          minimumFractionDigits: 2,
+                        })}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-gray-700">
+                        {supplier.lastPurchase
+                          ? new Date(supplier.lastPurchase).toLocaleDateString(
+                              "es-MX"
+                            )
+                          : "-"}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleCreatePurchase(supplier.id)}
+                          className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-lg font-medium hover:from-green-600 hover:to-emerald-600 transition-all duration-200 shadow-sm hover:shadow flex items-center"
+                          title="Realizar compra"
+                        >
+                          <span className="mr-2">🛒</span>
+                          Comprar
+                        </button>
+                        <Link
+                          href={`/dashboard/suppliers/${supplier.id}`}
+                          className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 shadow-sm hover:shadow flex items-center"
+                        >
+                          <span className="mr-2">👁️</span>
+                          Ver
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-          <span className="text-sm text-gray-600">
-            Página {pagination.page} de {pagination.totalPages}
-          </span>
-
-          <button
-            onClick={() => handlePageChange(pagination.page + 1)}
-            disabled={pagination.page === pagination.totalPages}
-            className="px-3 py-1 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Siguiente
-          </button>
-        </div>
-      )}
-
-      {showModal && (
-        <SupplierModal
-          onClose={() => setShowModal(false)}
-          onSupplierCreated={handleSupplierCreated}
-        />
-      )}
-    </div>
-  );
-}
-
-function SupplierModal({
-  onClose,
-  onSupplierCreated,
-}: {
-  onClose: () => void;
-  onSupplierCreated: (supplier: Supplier) => void;
-}) {
-  const [form, setForm] = useState({
-    name: "",
-    contactName: "",
-    phone: "",
-    email: "",
-    street: "",
-    neighborhood: "",
-    postalCode: "",
-    city: "",
-    state: "",
-    municipality: "",
-    rfc: "",
-  });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    // Validación de RFC
-    if (form.rfc && !/^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$/.test(form.rfc)) {
-      setError("El formato del RFC no es válido");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const res = await fetch("/api/suppliers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-        credentials: "include",
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || "Error al crear proveedor");
-      }
-
-      const data = await res.json();
-      onSupplierCreated(data.supplier);
-    } catch (err) {
-      console.error(err);
-      setError(
-        err instanceof Error ? err.message : "Error al crear el proveedor"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center p-6 border-b">
-          <h2 className="text-xl font-bold text-gray-800">Agregar Proveedor</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-2xl"
-          >
-            ×
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6">
-          {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-              {error}
+          {suppliers.length === 0 && !loading && (
+            <div className="p-12 text-center">
+              <div className="bg-gradient-to-r from-gray-50 to-blue-50 p-8 rounded-2xl inline-block border border-gray-200">
+                <div className="text-6xl mb-4">🏢</div>
+                <h3 className="text-2xl font-bold text-gray-800 mb-2">
+                  {searchTerm
+                    ? "No se encontraron proveedores"
+                    : "No hay proveedores registrados"}
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  {searchTerm
+                    ? "Intenta con otros términos de búsqueda"
+                    : "Comienza registrando tu primer proveedor"}
+                </p>
+                <Link
+                  href="/dashboard/suppliers/create"
+                  className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-8 py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  + Agregar Primer Proveedor
+                </Link>
+              </div>
             </div>
           )}
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nombre del Proveedor *
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                required
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Ingrese el nombre del proveedor"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nombre de Contacto
-              </label>
-              <input
-                type="text"
-                name="contactName"
-                value={form.contactName}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Persona de contacto"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Teléfono
-              </label>
-              <input
-                type="tel"
-                name="phone"
-                value={form.phone}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="+52 123 456 7890"
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={form.email}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="proveedor@ejemplo.com"
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Calle
-              </label>
-              <input
-                type="text"
-                name="street"
-                value={form.street}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Nombre de la calle"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Colonia
-              </label>
-              <input
-                type="text"
-                name="neighborhood"
-                value={form.neighborhood}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Colonia"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Código Postal
-              </label>
-              <input
-                type="text"
-                name="postalCode"
-                value={form.postalCode}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="00000"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Ciudad
-              </label>
-              <input
-                type="text"
-                name="city"
-                value={form.city}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Ciudad"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Estado
-              </label>
-              <input
-                type="text"
-                name="state"
-                value={form.state}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Estado"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Municipio/Localidad
-              </label>
-              <input
-                type="text"
-                name="municipality"
-                value={form.municipality}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Municipio"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                RFC
-              </label>
-              <input
-                type="text"
-                name="rfc"
-                value={form.rfc}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="XAXX010101000"
-                pattern="[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}"
-                title="Formato de RFC válido: 3-4 letras, 6 dígitos, 3 caracteres alfanuméricos"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t">
+        {/* Paginación */}
+        {pagination.totalPages > 1 && (
+          <div className="mt-8 flex justify-center items-center gap-3">
             <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+              onClick={() => handlePageChange(pagination.page - 1)}
+              disabled={pagination.page === 1}
+              className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
             >
-              Cancelar
+              ← Anterior
             </button>
+
+            <div className="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 text-blue-700 font-medium">
+              Página {pagination.page} de {pagination.totalPages}
+            </div>
+
             <button
-              type="submit"
-              disabled={loading}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-blue-400 disabled:cursor-not-allowed"
+              onClick={() => handlePageChange(pagination.page + 1)}
+              disabled={pagination.page === pagination.totalPages}
+              className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
             >
-              {loading ? "Creando..." : "Crear Proveedor"}
+              Siguiente →
             </button>
           </div>
-        </form>
+        )}
+
+        {/* Enlaces rápidos */}
+        <div className="mt-12 bg-gradient-to-r from-gray-900 to-gray-800 text-white py-8 px-6 rounded-2xl">
+          <h3 className="text-xl font-bold mb-6 text-center">
+            Acciones Rápidas
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Link
+              href="/dashboard/purchases"
+              className="bg-white/5 hover:bg-white/10 p-4 rounded-xl transition-all duration-200 group text-center"
+            >
+              <div className="text-2xl mb-2">📦</div>
+              <div className="font-medium mb-1 group-hover:text-blue-300">
+                Compras
+              </div>
+              <div className="text-sm text-gray-300">Ver todas las compras</div>
+            </Link>
+            <Link
+              href="/dashboard/inventory"
+              className="bg-white/5 hover:bg-white/10 p-4 rounded-xl transition-all duration-200 group text-center"
+            >
+              <div className="text-2xl mb-2">📊</div>
+              <div className="font-medium mb-1 group-hover:text-blue-300">
+                Inventario
+              </div>
+              <div className="text-sm text-gray-300">Control de stock</div>
+            </Link>
+            <Link
+              href="/dashboard/reports/suppliers"
+              className="bg-white/5 hover:bg-white/10 p-4 rounded-xl transition-all duration-200 group text-center"
+            >
+              <div className="text-2xl mb-2">📈</div>
+              <div className="font-medium mb-1 group-hover:text-blue-300">
+                Reportes
+              </div>
+              <div className="text-sm text-gray-300">
+                Análisis de proveedores
+              </div>
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
   );

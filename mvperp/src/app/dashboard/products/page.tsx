@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast";
 
 interface Product {
   id: string;
@@ -22,7 +23,6 @@ export default function Products() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const router = useRouter();
 
-  // Cargar productos
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -34,7 +34,7 @@ export default function Products() {
         setFilteredProducts(data.products || []);
       } catch (err) {
         console.error(err);
-        alert("Error al cargar los productos");
+        toast.error("Error al cargar los productos");
       } finally {
         setIsLoading(false);
       }
@@ -42,7 +42,6 @@ export default function Products() {
     fetchProducts();
   }, []);
 
-  // Filtrar productos
   useEffect(() => {
     if (!searchTerm) {
       setFilteredProducts(products);
@@ -60,7 +59,6 @@ export default function Products() {
     setCurrentPage(1);
   }, [searchTerm, products]);
 
-  // Paginación
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredProducts.slice(
@@ -88,7 +86,9 @@ export default function Products() {
 
   const handleDeleteSelected = async () => {
     if (
-      !confirm(`¿Seguro que quieres borrar ${selectedIds.length} producto(s)?`)
+      !confirm(
+        `¿Seguro que quieres borrar ${selectedIds.length} producto(s)? Esta acción no se puede deshacer.`
+      )
     )
       return;
     try {
@@ -102,14 +102,16 @@ export default function Products() {
       const failed = results.filter(
         (r) => r.status === "rejected" || !("value" in r && r.value.ok)
       );
-      if (failed.length > 0)
-        throw new Error(`${failed.length} productos no se pudieron borrar`);
+      if (failed.length > 0) {
+        toast.error(`${failed.length} productos no se pudieron borrar`);
+        throw new Error(`${failed.length} productos fallaron`);
+      }
       setProducts((prev) => prev.filter((p) => !selectedIds.includes(p.id)));
       setSelectedIds([]);
-      alert("Productos borrados exitosamente");
+      toast.success("Productos eliminados exitosamente");
     } catch (err) {
       console.error(err);
-      alert("Error al borrar algunos productos");
+      toast.error("Error al eliminar productos");
     }
   };
 
@@ -119,18 +121,20 @@ export default function Products() {
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setSearchTerm(e.target.value);
+
   const handleItemsPerPageChange = (
     e: React.ChangeEvent<HTMLSelectElement>
   ) => {
     setItemsPerPage(Number(e.target.value));
     setCurrentPage(1);
   };
+
   const goToPage = (page: number) => {
     if (page >= 1 && page <= totalPages) setCurrentPage(page);
   };
 
   const getPageNumbers = () => {
-    const pageNumbers = [];
+    const pageNumbers: (number | string)[] = [];
     const maxVisiblePages = 5;
     if (totalPages <= maxVisiblePages) {
       for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
@@ -155,197 +159,317 @@ export default function Products() {
     return pageNumbers;
   };
 
+  const formatCurrency = (amount?: number) => {
+    if (amount == null) return "—";
+    return new Intl.NumberFormat("es-MX", {
+      style: "currency",
+      currency: "MXN",
+    }).format(amount);
+  };
+
   if (isLoading) {
     return (
-      <div className="p-4">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold">Productos</h1>
-          <div className="animate-pulse bg-gray-300 h-10 w-32 rounded"></div>
+      <div className="flex justify-center items-center min-h-[500px]">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Cargando productos...</p>
         </div>
-        <div className="animate-pulse bg-gray-300 h-12 w-full mb-4 rounded"></div>
-        <div className="animate-pulse bg-gray-200 h-64 w-full rounded"></div>
       </div>
     );
   }
 
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Productos</h1>
-        <div className="flex gap-2">
+    <div className="space-y-6 animate-in fade-in duration-300 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800">Productos</h1>
+          <p className="text-gray-600 mt-1">
+            Gestiona tu catálogo de productos
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-3 w-full sm:w-auto">
           {selectedIds.length > 0 && (
             <button
               onClick={handleDeleteSelected}
-              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+              className="bg-gradient-to-r from-red-600 to-pink-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2"
             >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
               Borrar ({selectedIds.length})
             </button>
           )}
+
           <button
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2"
             onClick={() => router.push("/dashboard/products/create")}
           >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+              />
+            </svg>
             Crear producto
           </button>
+
           <button
-            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+            className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2"
             onClick={() => router.push("/dashboard/products/import")}
           >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+              />
+            </svg>
             Importar CSV
           </button>
         </div>
       </div>
 
-      {/* Buscador */}
-      <div className="mb-4">
+      {/* Barra de búsqueda */}
+      <div className="relative">
         <input
           type="text"
           placeholder="Buscar por nombre, SKU o categoría..."
           value={searchTerm}
           onChange={handleSearchChange}
-          className="w-full p-2 border border-gray-300 rounded"
+          className="w-full sm:w-96 border border-gray-300 rounded-xl px-5 py-3 pr-12 focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
         />
+        <svg
+          className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
+        </svg>
       </div>
 
-      {/* Selector items por página */}
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center text-sm text-gray-600 mb-4">
         <div className="flex items-center gap-2">
           <span>Mostrar</span>
           <select
             value={itemsPerPage}
             onChange={handleItemsPerPageChange}
-            className="border p-1 rounded"
+            className="bg-white border border-gray-300 rounded-lg px-3 py-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
           >
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
+            <option value={10}>10 por página</option>
+            <option value={20}>20 por página</option>
+            <option value={50}>50 por página</option>
           </select>
-          <span>productos por página</span>
         </div>
-        <div className="text-sm text-gray-600">
-          {filteredProducts.length} producto(s){" "}
-          {searchTerm && `para "${searchTerm}"`}
+        <div>
+          {filteredProducts.length} producto(s)
+          {searchTerm && ` para "${searchTerm}"`}
         </div>
       </div>
 
       {/* Tabla */}
-      <div className="overflow-x-auto">
-        <table className="table-auto w-full border border-gray-300 border-collapse">
-          <thead>
-            <tr className="bg-gray-200">
-              <th className="border px-2 py-2 w-12">
-                <input
-                  type="checkbox"
-                  checked={currentItems.every((p) =>
-                    selectedIds.includes(p.id)
-                  )}
-                  onChange={handleSelectAll}
-                />
-              </th>
-              <th className="border px-2 py-2 max-w-[150px]">Nombre</th>
-              <th className="border px-2 py-2 max-w-[100px]">SKU</th>
-              <th className="border px-2 py-2 w-20">Stock</th>
-              <th className="border px-2 py-2 max-w-[120px]">Categoría</th>
-              <th className="border px-2 py-2 w-28">Precio</th>
-            </tr>
-          </thead>
-          <tbody>
-            {currentItems.length > 0 ? (
-              currentItems.map((p) => (
-                <tr key={p.id} className="hover:bg-gray-100">
-                  <td className="border px-2 py-2 text-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(p.id)}
-                      onChange={() => handleCheckbox(p.id)}
-                    />
-                  </td>
-                  <td
-                    className="border px-2 py-2 cursor-pointer text-blue-600 hover:underline truncate max-w-[150px]"
-                    onClick={() => goToDetail(p.id)}
-                    title={p.name}
+      <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-gradient-to-r from-gray-50 to-blue-50">
+                <th className="px-6 py-4 w-12">
+                  <input
+                    type="checkbox"
+                    checked={
+                      currentItems.length > 0 &&
+                      currentItems.every((p) => selectedIds.includes(p.id))
+                    }
+                    onChange={handleSelectAll}
+                    className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                  />
+                </th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">
+                  Nombre
+                </th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">
+                  SKU
+                </th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">
+                  Stock
+                </th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">
+                  Categoría
+                </th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">
+                  Precio
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {currentItems.length > 0 ? (
+                currentItems.map((p) => (
+                  <tr
+                    key={p.id}
+                    className={`hover:bg-gray-50 transition-colors duration-150 ${selectedIds.includes(p.id) ? "bg-blue-50" : ""}`}
                   >
-                    {p.name}
-                  </td>
+                    <td className="px-6 py-5 text-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(p.id)}
+                        onChange={() => handleCheckbox(p.id)}
+                        className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                      />
+                    </td>
+                    <td
+                      className="px-6 py-5 font-medium text-blue-600 hover:underline cursor-pointer max-w-xs truncate"
+                      onClick={() => goToDetail(p.id)}
+                      title={p.name}
+                    >
+                      {p.name}
+                    </td>
+                    <td
+                      className="px-6 py-5 text-gray-700 max-w-xs truncate"
+                      title={p.sku || ""}
+                    >
+                      {p.sku || "—"}
+                    </td>
+                    <td className="px-6 py-5">
+                      <span
+                        className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                          (p.stock || 0) <= 5
+                            ? "bg-red-100 text-red-800"
+                            : "bg-green-100 text-green-800"
+                        }`}
+                      >
+                        {p.stock ?? 0}
+                      </span>
+                    </td>
+                    <td
+                      className="px-6 py-5 text-gray-700 max-w-xs truncate"
+                      title={p.category || ""}
+                    >
+                      {p.category || "—"}
+                    </td>
+                    <td className="px-6 py-5 font-medium text-green-600">
+                      {formatCurrency(p.price)}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
                   <td
-                    className="border px-2 py-2 truncate max-w-[100px]"
-                    title={p.sku || ""}
+                    colSpan={6}
+                    className="px-6 py-12 text-center text-gray-500"
                   >
-                    {p.sku || "-"}
-                  </td>
-                  <td className="border px-2 py-2 text-right w-20">
-                    {p.stock ?? 0}
-                  </td>
-                  <td
-                    className="border px-2 py-2 truncate max-w-[120px]"
-                    title={p.category || ""}
-                  >
-                    {p.category || "-"}
-                  </td>
-                  <td className="border px-2 py-2 text-right w-28">
-                    ${p.price?.toFixed(2) || "0.00"}
+                    {searchTerm ? (
+                      <div className="flex flex-col items-center gap-3">
+                        <svg
+                          className="w-12 h-12 text-gray-300"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="1.5"
+                            d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                        <p>No se encontraron productos para {searchTerm}</p>
+                      </div>
+                    ) : (
+                      "No hay productos registrados"
+                    )}
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={6} className="border px-2 py-2 text-center">
-                  {searchTerm
-                    ? "No se encontraron productos"
-                    : "No hay productos"}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Paginación */}
       {filteredProducts.length > 0 && (
-        <div className="flex justify-between items-center mt-4">
-          <div className="text-sm text-gray-600">
-            Mostrando {indexOfFirstItem + 1} -{" "}
-            {Math.min(indexOfLastItem, filteredProducts.length)} de{" "}
-            {filteredProducts.length} productos
-          </div>
-          <div className="flex items-center space-x-1">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 px-2 py-4">
+          <p className="text-sm text-gray-600">
+            Mostrando{" "}
+            <span className="font-medium">{indexOfFirstItem + 1}</span> –{" "}
+            <span className="font-medium">
+              {Math.min(indexOfLastItem, filteredProducts.length)}
+            </span>{" "}
+            de <span className="font-medium">{filteredProducts.length}</span>{" "}
+            productos
+          </p>
+
+          <div className="flex items-center gap-1">
             <button
               onClick={() => goToPage(1)}
               disabled={currentPage === 1}
-              className="px-3 py-1 border rounded disabled:opacity-50"
+              className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               &laquo;
             </button>
             <button
               onClick={() => goToPage(currentPage - 1)}
               disabled={currentPage === 1}
-              className="px-3 py-1 border rounded disabled:opacity-50"
+              className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               &lsaquo;
             </button>
+
             {getPageNumbers().map((page, index) => (
               <button
                 key={index}
-                onClick={() =>
-                  typeof page === "number" ? goToPage(page) : null
-                }
+                onClick={() => typeof page === "number" && goToPage(page)}
                 disabled={page === "..."}
-                className={`px-3 py-1 border rounded ${currentPage === page ? "bg-blue-600 text-white" : ""} ${page === "..." ? "cursor-default" : "hover:bg-gray-200"}`}
+                className={`w-10 h-10 flex items-center justify-center rounded-lg ${
+                  currentPage === page
+                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
+                    : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                } ${page === "..." ? "cursor-default bg-gray-100" : "transition-colors duration-150"}`}
               >
                 {page}
               </button>
             ))}
+
             <button
               onClick={() => goToPage(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="px-3 py-1 border rounded disabled:opacity-50"
+              className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               &rsaquo;
             </button>
             <button
               onClick={() => goToPage(totalPages)}
               disabled={currentPage === totalPages}
-              className="px-3 py-1 border rounded disabled:opacity-50"
+              className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               &raquo;
             </button>

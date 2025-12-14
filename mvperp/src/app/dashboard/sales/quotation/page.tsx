@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Quotation } from "@/types/sale";
+import { toast } from "react-hot-toast";
 
 interface PaginationInfo {
   page: number;
@@ -44,9 +45,11 @@ export default function Quotations() {
         const data = await res.json();
         setQuotations(data.quotations);
         setPagination(data.pagination);
+        setError("");
       } catch (err) {
         console.error(err);
         setError("No se pudieron cargar las cotizaciones");
+        toast.error("Error al cargar las cotizaciones");
       } finally {
         setLoading(false);
       }
@@ -63,11 +66,16 @@ export default function Quotations() {
   }, [searchTerm, fetchQuotations]);
 
   const handlePageChange = (newPage: number) => {
+    if (newPage < 1 || newPage > pagination.totalPages) return;
     fetchQuotations(newPage, searchTerm);
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("¿Estás seguro de que quieres eliminar esta cotización?")) {
+    if (
+      !confirm(
+        "¿Estás seguro de que quieres eliminar esta cotización? Esta acción no se puede deshacer."
+      )
+    ) {
       return;
     }
 
@@ -83,9 +91,10 @@ export default function Quotations() {
       }
 
       setQuotations((prev) => prev.filter((quotation) => quotation.id !== id));
+      toast.success("Cotización eliminada exitosamente");
     } catch (err) {
       console.error("Error deleting quotation:", err);
-      alert(err instanceof Error ? err.message : "Error al eliminar");
+      toast.error(err instanceof Error ? err.message : "Error al eliminar");
     }
   };
 
@@ -120,7 +129,6 @@ export default function Quotations() {
         throw new Error(errorData.error || "Error al crear la venta");
       }
 
-      // Actualizar estado de la cotización
       await fetch(`/api/quotations/${quotation.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -128,11 +136,11 @@ export default function Quotations() {
         credentials: "include",
       });
 
-      alert("Cotización convertida a venta exitosamente");
+      toast.success("Cotización convertida a venta exitosamente");
       router.push("/dashboard/sales");
     } catch (err) {
       console.error("Error converting quotation:", err);
-      alert(err instanceof Error ? err.message : "Error al convertir");
+      toast.error(err instanceof Error ? err.message : "Error al convertir");
     }
   };
 
@@ -144,22 +152,50 @@ export default function Quotations() {
   };
 
   const formatDate = (dateString: string | Date) => {
-    return new Date(dateString).toLocaleDateString("es-MX");
+    return new Date(dateString).toLocaleDateString("es-MX", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
   };
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      pending: { color: "bg-yellow-100 text-yellow-800", label: "Pendiente" },
-      accepted: { color: "bg-green-100 text-green-800", label: "Aceptada" },
-      rejected: { color: "bg-red-100 text-red-800", label: "Rechazada" },
-      expired: { color: "bg-gray-100 text-gray-800", label: "Expirada" },
-      converted: { color: "bg-blue-100 text-blue-800", label: "Convertida" },
+      pending: {
+        color: "from-yellow-100 to-amber-100 text-yellow-800",
+        label: "Pendiente",
+        icon: "⏳",
+      },
+      accepted: {
+        color: "from-green-100 to-emerald-100 text-green-800",
+        label: "Aceptada",
+        icon: "✅",
+      },
+      rejected: {
+        color: "from-red-100 to-pink-100 text-red-800",
+        label: "Rechazada",
+        icon: "❌",
+      },
+      expired: {
+        color: "from-gray-100 to-gray-200 text-gray-800",
+        label: "Expirada",
+        icon: "🕒",
+      },
+      converted: {
+        color: "from-blue-100 to-indigo-100 text-blue-800",
+        label: "Convertida",
+        icon: "🔄",
+      },
     };
 
     const config =
       statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
+
     return (
-      <span className={`px-2 py-1 text-xs rounded-full ${config.color}`}>
+      <span
+        className={`px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r ${config.color} flex items-center gap-1`}
+      >
+        <span>{config.icon}</span>
         {config.label}
       </span>
     );
@@ -167,149 +203,215 @@ export default function Quotations() {
 
   if (loading && quotations.length === 0) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex justify-center items-center min-h-[500px]">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Cargando cotizaciones...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-        <h1 className="text-2xl font-bold text-gray-800">Cotizaciones</h1>
+    <div className="space-y-6 animate-in fade-in duration-300 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800">Cotizaciones</h1>
+          <p className="text-gray-600 mt-1">
+            Gestiona y convierte tus cotizaciones en ventas
+          </p>
+        </div>
 
-        <div className="flex gap-3 w-full sm:w-auto">
-          <input
-            type="text"
-            placeholder="Buscar cotizaciones..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 sm:flex-none border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+        <div className="flex flex-wrap gap-3 w-full sm:w-auto">
+          <div className="relative flex-1 sm:flex-none">
+            <input
+              type="text"
+              placeholder="Buscar por cliente, ID o producto..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full sm:w-64 border border-gray-300 rounded-xl px-4 py-3 pr-10 focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm transition-all duration-200"
+            />
+            <svg
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          </div>
 
           <Link
             href="/dashboard/sales/quotation/create"
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+            className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 flex items-center gap-2 whitespace-nowrap"
           >
-            <span>+</span>
-            <span className="hidden sm:inline">Nueva Cotización</span>
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+              />
+            </svg>
+            Nueva Cotización
           </Link>
         </div>
       </div>
 
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
+        <div className="bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 text-red-700 px-6 py-4 rounded-2xl">
+          <div className="flex items-center gap-3">
+            <svg
+              className="w-5 h-5 text-red-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span>{error}</span>
+          </div>
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      {/* Tabla */}
+      <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <thead>
+              <tr className="bg-gradient-to-r from-gray-50 to-blue-50">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">
                   ID
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">
                   Fecha
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">
                   Cliente
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">
                   Vencimiento
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">
                   Productos
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">
                   Total
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">
                   Estado
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">
                   Acciones
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-100">
               {quotations.map((quotation) => (
                 <tr
                   key={quotation.id}
-                  className="hover:bg-gray-50 transition-colors"
+                  className="hover:bg-gray-50 transition-colors duration-150"
                 >
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="font-medium text-gray-900">
-                      #{quotation.id?.slice(0, 8)}
+                  <td className="px-6 py-5">
+                    <div className="font-bold text-blue-600">
+                      #{quotation.id?.slice(0, 8).toUpperCase()}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-gray-600">
+                  <td className="px-6 py-5">
+                    <div className="text-gray-700">
                       {formatDate(quotation.date)}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-gray-900">
-                      {quotation.customer?.name || "Cliente no disponible"}
+                  <td className="px-6 py-5">
+                    <div className="font-medium text-gray-800">
+                      {quotation.customer?.name || "Cliente General"}
                     </div>
+                    {quotation.customer?.email && (
+                      <div className="text-sm text-gray-500">
+                        {quotation.customer.email}
+                      </div>
+                    )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-5">
                     <div className="text-gray-600">
                       {quotation.expiryDate
-                        ? formatDate(quotation.expiryDate)
-                        : "Sin vencimiento"}
+                        ? new Date(quotation.expiryDate).toLocaleDateString(
+                            "es-MX",
+                            {
+                              day: "2-digit",
+                              month: "short",
+                            }
+                          )
+                        : "—"}
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900">
-                      {quotation.quotationItems.length} producto(s)
+                  <td className="px-6 py-5">
+                    <div className="text-sm font-medium text-gray-800">
+                      {quotation.quotationItems.length}{" "}
+                      {quotation.quotationItems.length === 1
+                        ? "producto"
+                        : "productos"}
                     </div>
-                    <div className="text-sm text-gray-500">
-                      {quotation.quotationItems
-                        .slice(0, 2)
-                        .map((item, index) => (
-                          <span key={item.id}>
-                            {item.product?.name}
-                            {index <
-                              quotation.quotationItems.slice(0, 2).length - 1 &&
-                              ", "}
-                          </span>
-                        ))}
-                      {quotation.quotationItems.length > 2 && "..."}
+                    <div className="text-xs text-gray-500 mt-1 max-w-xs">
+                      {quotation.quotationItems.slice(0, 2).map((item, idx) => (
+                        <span key={item.id}>
+                          {item.product?.name || "Sin nombre"}
+                          {idx <
+                            Math.min(2, quotation.quotationItems.length) - 1 &&
+                            ", "}
+                        </span>
+                      ))}
+                      {quotation.quotationItems.length > 2 && (
+                        <span className="font-medium">
+                          {" "}
+                          +{quotation.quotationItems.length - 2}
+                        </span>
+                      )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-green-600 font-semibold">
+                  <td className="px-6 py-5">
+                    <div className="font-bold text-green-600">
                       {formatCurrency(quotation.totalAmount)}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-5">
                     {getStatusBadge(quotation.status)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex gap-2">
+                  <td className="px-6 py-5">
+                    <div className="flex flex-wrap gap-2">
                       <Link
                         href={`/dashboard/sales/quotation/${quotation.id}`}
-                        className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition-colors text-sm"
-                        title="Ver detalles"
+                        className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow hover:shadow-md transition-all duration-200 whitespace-nowrap"
                       >
                         Ver
                       </Link>
                       {quotation.status === "pending" && (
                         <button
                           onClick={() => handleConvertToSale(quotation)}
-                          className="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 transition-colors text-sm"
-                          title="Convertir a venta"
+                          className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow hover:shadow-md transition-all duration-200 whitespace-nowrap"
                         >
                           Vender
                         </button>
                       )}
                       <button
                         onClick={() => handleDelete(quotation.id!)}
-                        className="bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700 transition-colors text-sm"
-                        title="Eliminar cotización"
+                        className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow hover:shadow-md transition-all duration-200 whitespace-nowrap"
                       >
                         Eliminar
                       </button>
@@ -322,34 +424,59 @@ export default function Quotations() {
         </div>
 
         {quotations.length === 0 && !loading && (
-          <div className="text-center py-8 text-gray-500">
-            No se encontraron cotizaciones
+          <div className="text-center py-12 text-gray-500 bg-gray-50">
+            <svg
+              className="w-16 h-16 mx-auto text-gray-300 mb-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="1.5"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+            <p>No se encontraron cotizaciones</p>
+            <p className="text-sm mt-1">
+              {searchTerm
+                ? "Prueba con otros términos de búsqueda."
+                : "Crea una nueva cotización para comenzar."}
+            </p>
           </div>
         )}
       </div>
 
       {/* Paginación */}
       {pagination.totalPages > 1 && (
-        <div className="flex justify-center items-center gap-2 mt-6">
-          <button
-            onClick={() => handlePageChange(pagination.page - 1)}
-            disabled={pagination.page === 1}
-            className="px-3 py-1 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Anterior
-          </button>
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 px-4">
+          <p className="text-sm text-gray-600">
+            Mostrando página {pagination.page} de {pagination.totalPages} (
+            {pagination.totalCount} cotizaciones)
+          </p>
 
-          <span className="text-sm text-gray-600">
-            Página {pagination.page} de {pagination.totalPages}
-          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handlePageChange(pagination.page - 1)}
+              disabled={pagination.page === 1}
+              className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Anterior
+            </button>
 
-          <button
-            onClick={() => handlePageChange(pagination.page + 1)}
-            disabled={pagination.page === pagination.totalPages}
-            className="px-3 py-1 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Siguiente
-          </button>
+            <span className="px-4 py-2 text-sm font-medium text-gray-800 bg-gray-100 rounded-lg">
+              {pagination.page}
+            </span>
+
+            <button
+              onClick={() => handlePageChange(pagination.page + 1)}
+              disabled={pagination.page === pagination.totalPages}
+              className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Siguiente
+            </button>
+          </div>
         </div>
       )}
     </div>
