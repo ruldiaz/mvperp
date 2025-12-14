@@ -1,4 +1,3 @@
-// src/app/api/suppliers/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { prisma } from "@/lib/prisma";
@@ -11,13 +10,12 @@ interface JwtPayload {
   name?: string;
 }
 
-// GET /api/suppliers/[id] - Obtener un proveedor específico
+// GET /api/suppliers/[id]
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Verificar autenticación
     if (!JWT_SECRET) {
       return NextResponse.json(
         { error: "JWT secret no definido" },
@@ -30,10 +28,9 @@ export async function GET(
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
 
-    let userId: string;
+    // ✅ Validar token (sin userId no usado)
     try {
-      const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
-      userId = payload.userId;
+      jwt.verify(token, JWT_SECRET) as JwtPayload;
     } catch {
       return NextResponse.json(
         { error: "Token inválido o expirado" },
@@ -62,7 +59,7 @@ export async function GET(
           orderBy: {
             date: "desc",
           },
-          take: 10, // Últimas 10 compras
+          take: 10,
         },
       },
     });
@@ -84,13 +81,12 @@ export async function GET(
   }
 }
 
-// PUT /api/suppliers/[id] - Actualizar un proveedor
+// PUT /api/suppliers/[id]
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Verificar autenticación
     if (!JWT_SECRET) {
       return NextResponse.json(
         { error: "JWT secret no definido" },
@@ -103,10 +99,9 @@ export async function PUT(
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
 
-    let userId: string;
+    // ✅ Validar token
     try {
-      const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
-      userId = payload.userId;
+      jwt.verify(token, JWT_SECRET) as JwtPayload;
     } catch {
       return NextResponse.json(
         { error: "Token inválido o expirado" },
@@ -117,7 +112,6 @@ export async function PUT(
     const { id } = await params;
     const body = await req.json();
 
-    // Validaciones básicas
     if (body.name && body.name.trim() === "") {
       return NextResponse.json(
         { error: "El nombre del proveedor es requerido" },
@@ -125,7 +119,6 @@ export async function PUT(
       );
     }
 
-    // Verificar que el proveedor existe
     const existingSupplier = await prisma.supplier.findUnique({
       where: { id },
     });
@@ -137,7 +130,6 @@ export async function PUT(
       );
     }
 
-    // Actualizar el proveedor
     const supplier = await prisma.supplier.update({
       where: { id },
       data: {
@@ -165,13 +157,12 @@ export async function PUT(
   }
 }
 
-// DELETE /api/suppliers/[id] - Eliminar un proveedor
+// DELETE /api/suppliers/[id]
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Verificar autenticación
     if (!JWT_SECRET) {
       return NextResponse.json(
         { error: "JWT secret no definido" },
@@ -184,10 +175,9 @@ export async function DELETE(
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
 
-    let userId: string;
+    // ✅ Validar token
     try {
-      const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
-      userId = payload.userId;
+      jwt.verify(token, JWT_SECRET) as JwtPayload;
     } catch {
       return NextResponse.json(
         { error: "Token inválido o expirado" },
@@ -197,7 +187,6 @@ export async function DELETE(
 
     const { id } = await params;
 
-    // Verificar que el proveedor existe
     const existingSupplier = await prisma.supplier.findUnique({
       where: { id },
       include: {
@@ -214,7 +203,6 @@ export async function DELETE(
       );
     }
 
-    // Verificar si tiene compras asociadas
     if (existingSupplier.purchases.length > 0) {
       return NextResponse.json(
         {
@@ -225,12 +213,13 @@ export async function DELETE(
       );
     }
 
-    // Eliminar el proveedor
     await prisma.supplier.delete({
       where: { id },
     });
 
-    return NextResponse.json({ message: "Proveedor eliminado correctamente" });
+    return NextResponse.json({
+      message: "Proveedor eliminado correctamente",
+    });
   } catch (error) {
     console.error("Error deleting supplier:", error);
     return NextResponse.json(

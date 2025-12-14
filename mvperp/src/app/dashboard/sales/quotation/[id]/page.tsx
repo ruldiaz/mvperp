@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Quotation } from "@/types/sale";
@@ -348,16 +348,11 @@ export default function QuotationDetailPage() {
 
   const quotationId = params.id as string;
 
-  useEffect(() => {
-    if (quotationId) {
-      fetchQuotation();
-    }
-  }, [quotationId]);
-
-  const fetchQuotation = async () => {
+  const fetchQuotation = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
+
       const res = await fetch(`/api/quotations/${quotationId}`, {
         credentials: "include",
       });
@@ -380,7 +375,13 @@ export default function QuotationDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [quotationId]);
+
+  useEffect(() => {
+    if (quotationId) {
+      fetchQuotation();
+    }
+  }, [quotationId, fetchQuotation]);
 
   const handleDelete = async () => {
     if (

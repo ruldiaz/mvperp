@@ -1,7 +1,7 @@
 // src/app/dashboard/products/import/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   CSVProduct,
@@ -120,13 +120,6 @@ export default function ImportProducts() {
     }
   };
 
-  // Reprocesar cuando cambia la configuración
-  useEffect(() => {
-    if (file) {
-      parseCSV(file);
-    }
-  }, [config, file]);
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
@@ -134,28 +127,31 @@ export default function ImportProducts() {
     }
   };
 
-  const parseCSV = (csvFile: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
-      const lines = text.split(/\r?\n/).filter((line) => line.trim());
-      const data: CSVProduct[] = [];
+  const parseCSV = useCallback(
+    (csvFile: File) => {
+      const reader = new FileReader();
 
-      const detectedHeaders =
-        config.hasHeaders && lines.length > 0
-          ? parseCSVLine(lines[0], config.delimiter)
-          : [];
+      reader.onload = (e) => {
+        const text = e.target?.result as string;
+        const lines = text.split(/\r?\n/).filter((line) => line.trim());
+        const data: CSVProduct[] = [];
 
-      setHeaders(detectedHeaders);
+        const detectedHeaders =
+          config.hasHeaders && lines.length > 0
+            ? parseCSVLine(lines[0], config.delimiter)
+            : [];
 
-      const startIndex = config.hasHeaders ? 1 : 0;
+        setHeaders(detectedHeaders);
 
-      for (
-        let i = startIndex;
-        i < Math.min(lines.length, startIndex + 6);
-        i++
-      ) {
-        if (lines[i].trim()) {
+        const startIndex = config.hasHeaders ? 1 : 0;
+
+        for (
+          let i = startIndex;
+          i < Math.min(lines.length, startIndex + 6);
+          i++
+        ) {
+          if (!lines[i].trim()) continue;
+
           const values = parseCSVLine(lines[i], config.delimiter);
 
           const product: CSVProduct = {
@@ -256,14 +252,24 @@ export default function ImportProducts() {
               config
             ),
           };
+
           data.push(product);
         }
-      }
 
-      setPreviewData(data);
-    };
-    reader.readAsText(csvFile);
-  };
+        setPreviewData(data);
+      };
+
+      reader.readAsText(csvFile);
+    },
+    [config] // 👈 dependencia correcta
+  );
+
+  // Reprocesar cuando cambia la configuración
+  useEffect(() => {
+    if (file) {
+      parseCSV(file);
+    }
+  }, [file, config, parseCSV]);
 
   const handleConfigChange = (
     key: keyof CSVImportConfig,

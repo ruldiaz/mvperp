@@ -1,4 +1,3 @@
-// app/api/purchases/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import jwt from "jsonwebtoken";
@@ -11,13 +10,10 @@ interface JwtPayload {
   name?: string;
 }
 
-interface Params {
-  params: {
-    id: string;
-  };
-}
-
-export async function GET(req: NextRequest, { params }: Params) {
+export async function GET(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
     if (!JWT_SECRET) {
       return NextResponse.json(
@@ -27,11 +23,13 @@ export async function GET(req: NextRequest, { params }: Params) {
     }
 
     const token = req.cookies.get("token")?.value;
+
     if (!token) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
 
     let userId: string;
+
     try {
       const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
       userId = payload.userId;
@@ -42,15 +40,17 @@ export async function GET(req: NextRequest, { params }: Params) {
       );
     }
 
-    const { id } = params;
+    // 🔥 NEXT 15: params es Promise
+    const { id } = await context.params;
 
     const purchase = await prisma.purchase.findUnique({
-      where: { id, userId },
+      where: {
+        id,
+        userId,
+      },
       include: {
         user: {
-          select: {
-            name: true,
-          },
+          select: { name: true },
         },
         supplier: {
           select: {
@@ -84,6 +84,7 @@ export async function GET(req: NextRequest, { params }: Params) {
     return NextResponse.json({ purchase });
   } catch (error) {
     console.error("Error fetching purchase:", error);
+
     return NextResponse.json(
       { error: "Error fetching purchase" },
       { status: 500 }

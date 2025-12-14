@@ -35,6 +35,7 @@ export default function ProductDetail() {
       const data = await res.json();
       setImage(data.imageUrl);
     } catch (error) {
+      console.error(error);
       setImage("/placeholder-image.png");
       setError("No se pudo cargar la imagen");
     }

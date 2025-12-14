@@ -32,6 +32,7 @@ export default function Login() {
         toast.error(data.error || "Error en login");
       }
     } catch (error) {
+      console.error(error);
       toast.error("Error de conexión");
     } finally {
       setIsLoading(false);

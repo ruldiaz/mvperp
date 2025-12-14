@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Sale } from "@/types/sale";
@@ -25,16 +25,11 @@ export default function SaleDetailPage() {
 
   const saleId = params.id as string;
 
-  useEffect(() => {
-    if (saleId) {
-      fetchSale();
-    }
-  }, [saleId]);
-
-  const fetchSale = async () => {
+  const fetchSale = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
+
       const res = await fetch(`/api/sales/${saleId}`, {
         credentials: "include",
       });
@@ -57,7 +52,13 @@ export default function SaleDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [saleId]);
+
+  useEffect(() => {
+    if (saleId) {
+      fetchSale();
+    }
+  }, [saleId, fetchSale]);
 
   const handleDelete = async () => {
     if (

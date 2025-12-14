@@ -99,7 +99,7 @@ export default function LandingPage() {
 
       {/* Secciones de contenido */}
       <div className="max-w-6xl mx-auto px-4 py-12" id="funcionalidades">
-        {sections.map((section, index) => (
+        {sections.map((section) => (
           <section
             key={section.id}
             id={section.id}

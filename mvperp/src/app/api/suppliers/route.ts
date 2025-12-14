@@ -1,4 +1,3 @@
-// src/app/api/suppliers/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { prisma } from "@/lib/prisma";
@@ -11,10 +10,9 @@ interface JwtPayload {
   name?: string;
 }
 
-// GET /api/suppliers - Obtener todos los proveedores
+// GET /api/suppliers
 export async function GET(req: NextRequest) {
   try {
-    // Verificar autenticación
     if (!JWT_SECRET) {
       return NextResponse.json(
         { error: "JWT secret no definido" },
@@ -27,10 +25,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
 
-    let userId: string;
+    // ✅ Validar token sin variable inútil
     try {
-      const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
-      userId = payload.userId;
+      jwt.verify(token, JWT_SECRET) as JwtPayload;
     } catch {
       return NextResponse.json(
         { error: "Token inválido o expirado" },
@@ -38,7 +35,6 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Obtener parámetros de consulta
     const { searchParams } = new URL(req.url);
     const search = searchParams.get("search");
     const page = parseInt(searchParams.get("page") || "1");
@@ -46,7 +42,6 @@ export async function GET(req: NextRequest) {
     const sortBy = searchParams.get("sortBy") || "name";
     const sortOrder = searchParams.get("sortOrder") || "asc";
 
-    // Construir condiciones de búsqueda
     const where: {
       OR?: Array<{
         name?: { contains: string; mode: "insensitive" };
@@ -67,7 +62,6 @@ export async function GET(req: NextRequest) {
       ];
     }
 
-    // Obtener proveedores
     const suppliers = await prisma.supplier.findMany({
       where,
       skip: (page - 1) * limit,
@@ -77,7 +71,6 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // Obtener conteo total para paginación
     const totalCount = await prisma.supplier.count({ where });
 
     return NextResponse.json({
@@ -98,10 +91,9 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/suppliers - Crear un nuevo proveedor
+// POST /api/suppliers
 export async function POST(req: NextRequest) {
   try {
-    // Verificar autenticación
     if (!JWT_SECRET) {
       return NextResponse.json(
         { error: "JWT secret no definido" },
@@ -114,10 +106,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
 
-    let userId: string;
+    // ✅ Validar token sin userId no usado
     try {
-      const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
-      userId = payload.userId;
+      jwt.verify(token, JWT_SECRET) as JwtPayload;
     } catch {
       return NextResponse.json(
         { error: "Token inválido o expirado" },
@@ -127,7 +118,6 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
 
-    // Validaciones básicas
     if (!body.name || body.name.trim() === "") {
       return NextResponse.json(
         { error: "El nombre del proveedor es requerido" },
@@ -135,7 +125,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Crear el proveedor
     const supplier = await prisma.supplier.create({
       data: {
         name: body.name,

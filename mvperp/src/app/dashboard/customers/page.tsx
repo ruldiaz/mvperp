@@ -2,7 +2,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Customer } from "@/types/customer";
 import { toast } from "react-hot-toast";
@@ -25,7 +24,6 @@ export default function Customers() {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const router = useRouter();
 
   const fetchCustomers = useCallback(
     async (page = 1, search = "") => {

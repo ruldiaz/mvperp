@@ -40,7 +40,7 @@ export async function PUT(
 
     // Filtrar undefined
     const safeData = Object.fromEntries(
-      Object.entries(data).filter(([_, v]) => v !== undefined)
+      Object.entries(data).filter(([, v]) => v !== undefined)
     );
 
     const updatedProduct = await prisma.product.update({

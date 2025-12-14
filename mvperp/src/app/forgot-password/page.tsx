@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
 
 export default function ForgotPassword() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -50,6 +48,7 @@ export default function ForgotPassword() {
         toast.error(data.message || "Error al enviar el correo");
       }
     } catch (error) {
+      console.error(error);
       toast.error("Error de conexión. Intenta de nuevo.");
     } finally {
       setIsLoading(false);

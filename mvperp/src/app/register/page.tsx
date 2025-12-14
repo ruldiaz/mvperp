@@ -72,6 +72,7 @@ export default function Register() {
         console.log(data.error);
       }
     } catch (error) {
+      console.error(error);
       toast.error("Error de conexión");
     } finally {
       setIsLoading(false);

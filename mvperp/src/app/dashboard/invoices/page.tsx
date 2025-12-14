@@ -2,7 +2,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Invoice } from "@/types/invoice";
 
@@ -24,7 +23,6 @@ export default function Invoices() {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const router = useRouter();
 
   const fetchInvoices = useCallback(
     async (page = 1, search = "") => {

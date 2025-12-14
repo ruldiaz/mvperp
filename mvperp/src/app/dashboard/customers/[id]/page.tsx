@@ -1,7 +1,7 @@
 // src/app/dashboard/customers/[id]/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Customer } from "@/types/customer";
@@ -22,16 +22,12 @@ export default function CustomerDetailsPage() {
 
   const customerId = params.id as string;
 
-  useEffect(() => {
-    if (customerId) {
-      fetchCustomer();
-    }
-  }, [customerId]);
-
-  const fetchCustomer = async () => {
+  // ✅ useCallback para evitar warning de dependencias
+  const fetchCustomer = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
+
       const res = await fetch(`/api/customers/${customerId}`, {
         credentials: "include",
       });
@@ -47,14 +43,19 @@ export default function CustomerDetailsPage() {
       setCustomer(data.customer);
     } catch (err) {
       console.error("Error fetching customer:", err);
-      setError(err instanceof Error ? err.message : "Error desconocido");
-      toast.error(
-        err instanceof Error ? err.message : "Error al cargar el cliente"
-      );
+      const message = err instanceof Error ? err.message : "Error desconocido";
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [customerId]);
+
+  useEffect(() => {
+    if (customerId) {
+      fetchCustomer();
+    }
+  }, [customerId, fetchCustomer]);
 
   const handleDelete = async () => {
     if (

@@ -243,7 +243,7 @@ export function validateTaxObject(taxObject: string): boolean {
   return validObjects.includes(taxObject);
 }
 
-export default {
+const cfdiHelpers = {
   getDefaultCfdiUse,
   validateExpeditionPlaceForRfc,
   isValidRfc,
@@ -263,3 +263,5 @@ export default {
   getFiscalRegimeDescription,
   validateTaxObject,
 };
+
+export default cfdiHelpers;

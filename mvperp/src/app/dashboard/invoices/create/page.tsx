@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Product } from "@/types/product";
 import { Customer } from "@/types/customer";
-import { Sale, SaleItem } from "@/types/sale";
+import { SaleItem } from "@/types/sale";
 import { CreateInvoiceRequest } from "@/types/invoice";
 
 // Interfaz local para los items del formulario
@@ -27,7 +27,6 @@ export default function CreateInvoice() {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [sale, setSale] = useState<Sale | null>(null);
   const [items, setItems] = useState<InvoiceItemForm[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("PUE");
@@ -62,7 +61,6 @@ export default function CreateInvoice() {
           });
           if (saleRes.ok) {
             const saleData = await saleRes.json();
-            setSale(saleData.sale);
             setSelectedCustomer(saleData.sale.customerId);
 
             // Convertir items de venta a items de factura usando tipos correctos

@@ -1,14 +1,10 @@
 // src/app/dashboard/suppliers/[id]/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  SupplierDetails as SupplierDetailsType,
-  Purchase,
-  PurchaseItem,
-} from "@/types/supplier";
+import { SupplierDetails as SupplierDetailsType } from "@/types/supplier";
 
 interface EditSupplierModalProps {
   supplier: SupplierDetailsType;
@@ -278,16 +274,11 @@ export default function SupplierDetailsPage() {
 
   const supplierId = params.id as string;
 
-  useEffect(() => {
-    if (supplierId) {
-      fetchSupplier();
-    }
-  }, [supplierId]);
-
-  const fetchSupplier = async () => {
+  const fetchSupplier = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
+
       const res = await fetch(`/api/suppliers/${supplierId}`, {
         credentials: "include",
       });
@@ -301,7 +292,6 @@ export default function SupplierDetailsPage() {
 
       const data = await res.json();
 
-      // Asegurarnos de que purchases siempre sea un array
       const supplierData = {
         ...data.supplier,
         purchases: data.supplier.purchases || [],
@@ -314,7 +304,13 @@ export default function SupplierDetailsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [supplierId]);
+
+  useEffect(() => {
+    if (supplierId) {
+      fetchSupplier();
+    }
+  }, [supplierId, fetchSupplier]);
 
   const handleDelete = async () => {
     if (!confirm("¿Estás seguro de que quieres eliminar este proveedor?")) {
