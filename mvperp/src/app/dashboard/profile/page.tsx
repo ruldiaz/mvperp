@@ -84,7 +84,7 @@ export default function CompanyProfile() {
       if (response.ok) {
         setCompany(data.company);
         setMessage("Datos guardados correctamente");
-        setIsEditing(false); // Salir del modo edición después de guardar
+        setIsEditing(false);
       } else {
         setMessage(data.error || "Error al guardar los datos");
       }
@@ -115,13 +115,13 @@ export default function CompanyProfile() {
     if (company) {
       setFormData({
         ...company,
-        interiorNumber: company.interiorNumber || undefined, // Convertir null a undefined
-        country: company.country || undefined,
-        email: company.email || undefined,
-        phone: company.phone || undefined,
-        pac: company.pac || undefined,
-        pacUser: company.pacUser || undefined,
-        pacPass: company.pacPass || undefined,
+        interiorNumber: company.interiorNumber || "",
+        country: company.country || "México",
+        email: company.email || "",
+        phone: company.phone || "",
+        pac: company.pac || "",
+        pacUser: company.pacUser || "",
+        pacPass: company.pacPass || "",
       });
     }
     setIsEditing(false);
@@ -130,349 +130,502 @@ export default function CompanyProfile() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 flex justify-center items-center">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-8 rounded-2xl border border-gray-200 shadow-sm text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-xl font-semibold text-gray-700">
+            Cargando datos de la empresa...
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      {/* Encabezado con botones */}
-      <div className="flex justify-between items-center mb-6">
-        <Link
-          href="/dashboard"
-          className="text-blue-600 hover:text-blue-800 font-medium"
-        >
-          ← Volver al Dashboard
-        </Link>
-
-        {!isEditing && company && (
-          <button
-            onClick={handleEdit}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-          >
-            Editar
-          </button>
-        )}
+    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
+      {/* Hero Section */}
+      <div className="pt-8 pb-8 px-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-b-2xl shadow-lg">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div>
+              <h1 className="text-4xl font-bold mb-2 leading-tight">
+                Perfil de Empresa
+              </h1>
+              <p className="text-xl text-blue-100 max-w-2xl">
+                Configura tus datos fiscales y de facturación
+              </p>
+            </div>
+            <Link
+              href="/dashboard"
+              className="mt-4 md:mt-0 bg-transparent border-2 border-white text-white px-6 py-2 rounded-lg font-semibold hover:bg-white/10 transition-all duration-200"
+            >
+              ← Volver al Dashboard
+            </Link>
+          </div>
+        </div>
       </div>
 
-      <h1 className="text-2xl font-bold mb-6">Datos Fiscales de la Empresa</h1>
-
-      {message && (
-        <div
-          className={`p-4 mb-4 rounded ${
-            message.includes("Error")
-              ? "bg-red-100 text-red-700"
-              : "bg-green-100 text-green-700"
-          }`}
-        >
-          {message}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Información Básica */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-lg font-semibold mb-4">Información Básica</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Razón Social *
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                required
-                disabled={!isEditing}
-                className="w-full p-2 border rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">RFC *</label>
-              <input
-                type="text"
-                name="rfc"
-                value={formData.rfc}
-                onChange={handleInputChange}
-                required
-                disabled={!isEditing}
-                className="w-full p-2 border rounded uppercase disabled:bg-gray-100 disabled:cursor-not-allowed"
-                maxLength={13}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Régimen Fiscal *
-              </label>
-              <select
-                name="regime"
-                value={formData.regime}
-                onChange={handleInputChange}
-                required
-                disabled={!isEditing}
-                className="w-full p-2 border rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
-              >
-                <option value="">Seleccionar régimen</option>
-                {REGIMENES_FISCALES.map((regimen) => (
-                  <option key={regimen.value} value={regimen.value}>
-                    {regimen.label}
-                  </option>
-                ))}
-              </select>
+      {/* Contenido Principal */}
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        {message && (
+          <div
+            className={`mb-8 p-6 rounded-2xl border shadow-sm ${
+              message.includes("Error")
+                ? "bg-gradient-to-r from-red-50 to-pink-50 border-red-200 text-red-800"
+                : "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 text-green-800"
+            }`}
+          >
+            <div className="flex items-center space-x-4">
+              <div className="text-2xl bg-white p-3 rounded-xl shadow-sm">
+                {message.includes("Error") ? "⚠️" : "✅"}
+              </div>
+              <div className="flex-1">
+                <p>{message}</p>
+              </div>
             </div>
           </div>
-        </div>
-
-        {/* Domicilio Fiscal */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-lg font-semibold mb-4">Domicilio Fiscal</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Calle *</label>
-              <input
-                type="text"
-                name="street"
-                value={formData.street}
-                onChange={handleInputChange}
-                required
-                disabled={!isEditing}
-                className="w-full p-2 border rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Número Exterior *
-              </label>
-              <input
-                type="text"
-                name="exteriorNumber"
-                value={formData.exteriorNumber}
-                onChange={handleInputChange}
-                required
-                disabled={!isEditing}
-                className="w-full p-2 border rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Número Interior
-              </label>
-              <input
-                type="text"
-                name="interiorNumber"
-                value={formData.interiorNumber || ""}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-                className="w-full p-2 border rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Colonia *
-              </label>
-              <input
-                type="text"
-                name="neighborhood"
-                value={formData.neighborhood}
-                onChange={handleInputChange}
-                required
-                disabled={!isEditing}
-                className="w-full p-2 border rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Código Postal *
-              </label>
-              <input
-                type="text"
-                name="postalCode"
-                value={formData.postalCode}
-                onChange={handleInputChange}
-                required
-                disabled={!isEditing}
-                className="w-full p-2 border rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
-                maxLength={5}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Ciudad *</label>
-              <input
-                type="text"
-                name="city"
-                value={formData.city}
-                onChange={handleInputChange}
-                required
-                disabled={!isEditing}
-                className="w-full p-2 border rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Estado *</label>
-              <input
-                type="text"
-                name="state"
-                value={formData.state}
-                onChange={handleInputChange}
-                required
-                disabled={!isEditing}
-                className="w-full p-2 border rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Municipio *
-              </label>
-              <input
-                type="text"
-                name="municipality"
-                value={formData.municipality}
-                onChange={handleInputChange}
-                required
-                disabled={!isEditing}
-                className="w-full p-2 border rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">País *</label>
-              <input
-                type="text"
-                name="country"
-                value={formData.country}
-                onChange={handleInputChange}
-                required
-                disabled={!isEditing}
-                className="w-full p-2 border rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Contacto */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-lg font-semibold mb-4">Contacto</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Email</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email || ""}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-                className="w-full p-2 border rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Teléfono</label>
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone || ""}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-                className="w-full p-2 border rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Configuración PAC */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-lg font-semibold mb-4">Configuración PAC</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">PAC</label>
-              <select
-                name="pac"
-                value={formData.pac || ""}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-                className="w-full p-2 border rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
-              >
-                <option value="">Seleccionar PAC</option>
-                {PAC_OPTIONS.map((pac) => (
-                  <option key={pac.value} value={pac.value}>
-                    {pac.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Usuario PAC
-              </label>
-              <input
-                type="text"
-                name="pacUser"
-                value={formData.pacUser || ""}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-                className="w-full p-2 border rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Contraseña PAC
-              </label>
-              <input
-                type="password"
-                name="pacPass"
-                value={formData.pacPass || ""}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-                className="w-full p-2 border rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
-              />
-            </div>
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                name="testMode"
-                checked={formData.testMode}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-                className="mr-2 disabled:cursor-not-allowed"
-              />
-              <label className="text-sm font-medium">Modo Pruebas</label>
-            </div>
-          </div>
-        </div>
-
-        {/* Botones de acción */}
-        {isEditing ? (
-          <div className="flex justify-end gap-4">
-            <button
-              type="button"
-              onClick={handleCancel}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:bg-blue-400"
-            >
-              {saving ? "Guardando..." : "Guardar Datos"}
-            </button>
-          </div>
-        ) : (
-          !company && (
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={handleEdit}
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-              >
-                Crear Datos Fiscales
-              </button>
-            </div>
-          )
         )}
-      </form>
+
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {/* Información Básica */}
+          <div className="p-8 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-gray-200 shadow-sm">
+            <div className="flex items-start space-x-6 mb-6">
+              <div className="text-4xl bg-white p-4 rounded-xl shadow-sm">
+                🏢
+              </div>
+              <div className="flex-1">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold text-gray-800 mb-3">
+                    Información Básica
+                  </h2>
+                  {!isEditing && company && (
+                    <button
+                      type="button"
+                      onClick={handleEdit}
+                      className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 shadow-lg hover:shadow-xl"
+                    >
+                      ✏️ Editar
+                    </button>
+                  )}
+                </div>
+                <p className="text-gray-600 mb-6">
+                  Datos fiscales principales de tu empresa
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Razón Social *
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  required
+                  disabled={!isEditing}
+                  className="w-full p-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  placeholder="Nombre legal de la empresa"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  RFC *
+                </label>
+                <input
+                  type="text"
+                  name="rfc"
+                  value={formData.rfc}
+                  onChange={handleInputChange}
+                  required
+                  disabled={!isEditing}
+                  className="w-full p-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed uppercase"
+                  placeholder="XAXX010101000"
+                  maxLength={13}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Régimen Fiscal *
+                </label>
+                <select
+                  name="regime"
+                  value={formData.regime}
+                  onChange={handleInputChange}
+                  required
+                  disabled={!isEditing}
+                  className="w-full p-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                >
+                  <option value="">Seleccionar régimen</option>
+                  {REGIMENES_FISCALES.map((regimen) => (
+                    <option key={regimen.value} value={regimen.value}>
+                      {regimen.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Domicilio Fiscal */}
+          <div className="p-8 rounded-2xl bg-gradient-to-r from-green-50 to-emerald-50 border border-gray-200 shadow-sm">
+            <div className="flex items-start space-x-6 mb-6">
+              <div className="text-4xl bg-white p-4 rounded-xl shadow-sm">
+                📍
+              </div>
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold text-gray-800 mb-3">
+                  Domicilio Fiscal
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  Dirección legal para facturación
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Calle *
+                </label>
+                <input
+                  type="text"
+                  name="street"
+                  value={formData.street}
+                  onChange={handleInputChange}
+                  required
+                  disabled={!isEditing}
+                  className="w-full p-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  placeholder="Nombre de la calle"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Número Exterior *
+                </label>
+                <input
+                  type="text"
+                  name="exteriorNumber"
+                  value={formData.exteriorNumber}
+                  onChange={handleInputChange}
+                  required
+                  disabled={!isEditing}
+                  className="w-full p-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  placeholder="123"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Número Interior
+                </label>
+                <input
+                  type="text"
+                  name="interiorNumber"
+                  value={formData.interiorNumber || ""}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className="w-full p-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  placeholder="A"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Colonia *
+                </label>
+                <input
+                  type="text"
+                  name="neighborhood"
+                  value={formData.neighborhood}
+                  onChange={handleInputChange}
+                  required
+                  disabled={!isEditing}
+                  className="w-full p-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  placeholder="Nombre de la colonia"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Código Postal *
+                </label>
+                <input
+                  type="text"
+                  name="postalCode"
+                  value={formData.postalCode}
+                  onChange={handleInputChange}
+                  required
+                  disabled={!isEditing}
+                  className="w-full p-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  placeholder="00000"
+                  maxLength={5}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ciudad *
+                </label>
+                <input
+                  type="text"
+                  name="city"
+                  value={formData.city}
+                  onChange={handleInputChange}
+                  required
+                  disabled={!isEditing}
+                  className="w-full p-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  placeholder="Ciudad"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Estado *
+                </label>
+                <input
+                  type="text"
+                  name="state"
+                  value={formData.state}
+                  onChange={handleInputChange}
+                  required
+                  disabled={!isEditing}
+                  className="w-full p-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  placeholder="Estado"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Municipio *
+                </label>
+                <input
+                  type="text"
+                  name="municipality"
+                  value={formData.municipality}
+                  onChange={handleInputChange}
+                  required
+                  disabled={!isEditing}
+                  className="w-full p-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  placeholder="Municipio"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  País *
+                </label>
+                <input
+                  type="text"
+                  name="country"
+                  value={formData.country}
+                  onChange={handleInputChange}
+                  required
+                  disabled={!isEditing}
+                  className="w-full p-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  placeholder="México"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Contacto */}
+          <div className="p-8 rounded-2xl bg-gradient-to-r from-purple-50 to-pink-50 border border-gray-200 shadow-sm">
+            <div className="flex items-start space-x-6 mb-6">
+              <div className="text-4xl bg-white p-4 rounded-xl shadow-sm">
+                📞
+              </div>
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold text-gray-800 mb-3">
+                  Contacto
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  Información de contacto de la empresa
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email || ""}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className="w-full p-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  placeholder="empresa@ejemplo.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Teléfono
+                </label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone || ""}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className="w-full p-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  placeholder="+52 123 456 7890"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Configuración PAC */}
+          <div className="p-8 rounded-2xl bg-gradient-to-r from-yellow-50 to-amber-50 border border-gray-200 shadow-sm">
+            <div className="flex items-start space-x-6 mb-6">
+              <div className="text-4xl bg-white p-4 rounded-xl shadow-sm">
+                ⚙️
+              </div>
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold text-gray-800 mb-3">
+                  Configuración PAC
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  Configuración para timbrado de facturas
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  PAC
+                </label>
+                <select
+                  name="pac"
+                  value={formData.pac || ""}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className="w-full p-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                >
+                  <option value="">Seleccionar PAC</option>
+                  {PAC_OPTIONS.map((pac) => (
+                    <option key={pac.value} value={pac.value}>
+                      {pac.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Usuario PAC
+                </label>
+                <input
+                  type="text"
+                  name="pacUser"
+                  value={formData.pacUser || ""}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className="w-full p-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  placeholder="usuario_pac"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Contraseña PAC
+                </label>
+                <input
+                  type="password"
+                  name="pacPass"
+                  value={formData.pacPass || ""}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className="w-full p-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  placeholder="••••••••"
+                />
+              </div>
+
+              <div className="flex items-center">
+                <div className="flex items-center h-full">
+                  <input
+                    type="checkbox"
+                    name="testMode"
+                    checked={formData.testMode}
+                    onChange={handleInputChange}
+                    disabled={!isEditing}
+                    className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed"
+                  />
+                  <label className="ml-3 text-gray-700 font-medium">
+                    Modo Pruebas
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Botones de acción */}
+          <div className="flex justify-end gap-4">
+            {isEditing ? (
+              <>
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="bg-transparent border-2 border-gray-300 text-gray-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-8 py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                >
+                  {saving ? (
+                    <>
+                      <svg
+                        className="animate-spin h-5 w-5 mr-2 text-white"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        />
+                      </svg>
+                      Guardando...
+                    </>
+                  ) : (
+                    "Guardar Datos"
+                  )}
+                </button>
+              </>
+            ) : (
+              !company && (
+                <button
+                  type="button"
+                  onClick={handleEdit}
+                  className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-8 py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  + Crear Datos Fiscales
+                </button>
+              )
+            )}
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

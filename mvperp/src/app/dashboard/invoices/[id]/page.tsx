@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Invoice } from "@/types/invoice";
 import StampInvoiceButton from "@/app/dashboard/components/invoice/StampInvoiceButton";
 import CancelInvoiceButton from "@/app/dashboard/components/invoice/CancelInvoiceButton";
+import { toast } from "react-hot-toast";
 
 export default function InvoiceDetail() {
   const params = useParams();
@@ -22,13 +23,20 @@ export default function InvoiceDetail() {
           credentials: "include",
         });
 
-        if (!res.ok) throw new Error("Error al cargar la factura");
+        if (!res.ok) {
+          if (res.status === 404) throw new Error("Factura no encontrada");
+          throw new Error("Error al cargar la factura");
+        }
 
         const data = await res.json();
         setInvoice(data.invoice);
+        setError("");
       } catch (err) {
         console.error(err);
-        setError("No se pudo cargar la factura");
+        const message =
+          err instanceof Error ? err.message : "Error desconocido";
+        setError(message);
+        toast.error(message);
       } finally {
         setLoading(false);
       }
@@ -38,143 +46,420 @@ export default function InvoiceDetail() {
   }, [params.id]);
 
   const handleStamped = () => {
-    // Recargar la factura para ver los cambios
     router.refresh();
   };
 
-  if (loading) return <div>Cargando...</div>;
-  if (error) return <div className="text-red-600">{error}</div>;
-  if (!invoice) return <div>Factura no encontrada</div>;
+  const formatCurrency = (amount?: number) => {
+    if (amount == null) return "$0.00";
+    return new Intl.NumberFormat("es-MX", {
+      style: "currency",
+      currency: "MXN",
+    }).format(amount);
+  };
+
+  const formatDate = (dateString: string | Date | null | undefined) => {
+    if (!dateString) return "—";
+    return new Date(dateString).toLocaleDateString("es-MX", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getStatusBadge = (status: string) => {
+    const config = {
+      stamped: {
+        color: "from-green-100 to-emerald-100 text-green-800",
+        label: "TIMBRADA",
+        icon: "✅",
+      },
+      pending: {
+        color: "from-yellow-100 to-amber-100 text-yellow-800",
+        label: "PENDIENTE",
+        icon: "⏳",
+      },
+      cancelled: {
+        color: "from-red-100 to-pink-100 text-red-800",
+        label: "CANCELADA",
+        icon: "❌",
+      },
+    };
+    const selected = config[status as keyof typeof config] || {
+      color: "from-gray-100 to-gray-200 text-gray-800",
+      label: status.toUpperCase(),
+      icon: "📄",
+    };
+    return (
+      <span
+        className={`px-4 py-2 rounded-full font-semibold bg-gradient-to-r ${selected.color} flex items-center gap-2`}
+      >
+        <span>{selected.icon}</span>
+        {selected.label}
+      </span>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 flex justify-center items-center">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-8 rounded-2xl border border-gray-200 shadow-sm text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-xl font-semibold text-gray-700">
+            Cargando factura...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 flex justify-center items-center">
+        <div className="bg-gradient-to-r from-red-50 to-pink-50 p-8 rounded-2xl border border-red-200 shadow-sm text-center max-w-md">
+          <div className="text-4xl mb-4">⚠️</div>
+          <h2 className="text-2xl font-bold text-red-800 mb-2">Error</h2>
+          <p className="text-red-600 mb-6">{error}</p>
+          <Link
+            href="/dashboard/invoices"
+            className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-indigo-600 transition-all duration-200 inline-block"
+          >
+            ← Volver a facturas
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!invoice) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 flex justify-center items-center">
+        <div className="bg-gradient-to-r from-gray-50 to-blue-50 p-8 rounded-2xl border border-gray-200 shadow-sm text-center max-w-md">
+          <div className="text-4xl mb-4">🧾</div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">
+            Factura no encontrada
+          </h2>
+          <p className="text-gray-600 mb-6">
+            La factura que buscas no existe o no tienes acceso
+          </p>
+          <Link
+            href="/dashboard/invoices"
+            className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-indigo-600 transition-all duration-200 inline-block"
+          >
+            ← Volver a facturas
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const total = (invoice.subtotal || 0) + (invoice.taxes || 0);
+  const totalItems =
+    invoice.invoiceItems?.reduce(
+      (sum, item) => sum + (item.quantity || 0),
+      0
+    ) || 0;
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-4xl">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">
-          Factura{" "}
-          {invoice.serie && invoice.folio
-            ? `${invoice.serie}-${invoice.folio}`
-            : `#${invoice.id?.slice(0, 8)}`}
-        </h1>
-        <Link
-          href="/dashboard/invoices"
-          className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600"
-        >
-          Volver
-        </Link>
-      </div>
-
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div>
-            <h2 className="font-semibold text-gray-700">Información General</h2>
-            <p>
-              Estado:{" "}
-              <span
-                className={
-                  invoice.status === "stamped"
-                    ? "text-green-600"
-                    : "text-yellow-600"
-                }
-              >
-                {invoice.status}
-              </span>
-            </p>
-            <p>
-              Fecha: {new Date(invoice.createdAt || "").toLocaleDateString()}
-            </p>
-            {invoice.uuid && <p>UUID: {invoice.uuid}</p>}
-          </div>
-
-          <div>
-            <h2 className="font-semibold text-gray-700">Cliente</h2>
-            <p>{invoice.customer?.name}</p>
-            <p>RFC: {invoice.customer?.rfc || "N/A"}</p>
-          </div>
-        </div>
-
-        <div className="mb-6">
-          <h2 className="font-semibold text-gray-700 mb-2">
-            Productos/Servicios
-          </h2>
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50">
-                <th className="text-left p-2">Descripción</th>
-                <th className="text-right p-2">Cantidad</th>
-                <th className="text-right p-2">Precio</th>
-                <th className="text-right p-2">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {invoice.invoiceItems?.map((item, index) => (
-                <tr key={index} className="border-b">
-                  <td className="p-2">{item.saleItem?.description}</td>
-                  <td className="p-2 text-right">{item.quantity}</td>
-                  <td className="p-2 text-right">
-                    ${item.unitPrice.toFixed(2)}
-                  </td>
-                  <td className="p-2 text-right">
-                    ${item.totalPrice.toFixed(2)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 max-w-md ml-auto">
-          <div className="text-right font-semibold">Subtotal:</div>
-          <div className="text-right">${invoice.subtotal?.toFixed(2)}</div>
-
-          <div className="text-right font-semibold">IVA (16%):</div>
-          <div className="text-right">${invoice.taxes?.toFixed(2)}</div>
-
-          <div className="text-right font-bold text-lg border-t pt-2">
-            Total:
-          </div>
-          <div className="text-right font-bold text-lg border-t pt-2">
-            ${((invoice.subtotal || 0) + (invoice.taxes || 0)).toFixed(2)}
-          </div>
-        </div>
-      </div>
-
-      <div className="flex gap-3 justify-end">
-        {invoice.status === "pending" && (
-          <StampInvoiceButton
-            invoiceId={invoice.id!}
-            onStamped={handleStamped}
-          />
-        )}
-
-        {invoice.status === "stamped" && (
-          <>
-            <a
-              href={`/api/invoices/${invoice.id}/pdf`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
+      {/* Hero Section */}
+      <div className="pt-8 pb-8 px-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-b-2xl shadow-lg">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div>
+              <div className="flex items-center gap-4 mb-2">
+                <div className="text-3xl">🧾</div>
+                <div>
+                  <h1 className="text-4xl font-bold leading-tight">
+                    Factura{" "}
+                    {invoice.serie && invoice.folio
+                      ? `${invoice.serie}-${invoice.folio}`
+                      : `#${invoice.id?.slice(0, 8).toUpperCase()}`}
+                  </h1>
+                  <div className="flex items-center gap-3 mt-2">
+                    {getStatusBadge(invoice.status)}
+                    <p className="text-lg text-blue-100">
+                      {formatDate(invoice.createdAt)}
+                      {invoice.uuid && ` • UUID: ${invoice.uuid.slice(0, 8)}`}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <Link
+              href="/dashboard/invoices"
+              className="mt-4 md:mt-0 bg-transparent border-2 border-white text-white px-6 py-2 rounded-lg font-semibold hover:bg-white/10 transition-all duration-200"
             >
-              Descargar PDF
-            </a>
-            <CancelInvoiceButton
+              ← Volver a facturas
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Contenido Principal */}
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        {/* Tarjetas de resumen */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-gray-200 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-600 mb-1">Total Facturado</p>
+                <p className="text-3xl font-bold text-gray-800">
+                  {formatCurrency(total)}
+                </p>
+              </div>
+              <div className="text-3xl">💰</div>
+            </div>
+          </div>
+          <div className="p-6 rounded-2xl bg-gradient-to-r from-green-50 to-emerald-50 border border-gray-200 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-600 mb-1">Conceptos</p>
+                <p className="text-3xl font-bold text-gray-800">
+                  {invoice.invoiceItems?.length || 0}
+                </p>
+              </div>
+              <div className="text-3xl">📋</div>
+            </div>
+          </div>
+          <div className="p-6 rounded-2xl bg-gradient-to-r from-purple-50 to-pink-50 border border-gray-200 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-600 mb-1">Unidades</p>
+                <p className="text-3xl font-bold text-gray-800">{totalItems}</p>
+              </div>
+              <div className="text-3xl">📦</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Contenedor principal */}
+        <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300 bg-white">
+          <div className="p-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+              {/* Información general */}
+              <div>
+                <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                  <div className="text-2xl bg-white p-3 rounded-xl shadow-sm">
+                    📋
+                  </div>
+                  Información General
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center p-4 rounded-xl bg-gradient-to-r from-gray-50 to-blue-50">
+                    <span className="font-medium text-gray-700">Estado</span>
+                    {getStatusBadge(invoice.status)}
+                  </div>
+                  <div className="flex justify-between items-center p-4 rounded-xl bg-gradient-to-r from-gray-50 to-blue-50">
+                    <span className="font-medium text-gray-700">
+                      Fecha y Hora
+                    </span>
+                    <span className="font-semibold text-gray-800">
+                      {formatDate(invoice.createdAt)}
+                    </span>
+                  </div>
+                  {invoice.uuid && (
+                    <div className="p-4 rounded-xl bg-gradient-to-r from-gray-50 to-blue-50">
+                      <span className="font-medium text-gray-700 mb-2 block">
+                        UUID
+                      </span>
+                      <span className="font-mono text-sm text-gray-800">
+                        {invoice.uuid}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Información del cliente */}
+              <div>
+                <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                  <div className="text-2xl bg-white p-3 rounded-xl shadow-sm">
+                    👤
+                  </div>
+                  Cliente
+                </h3>
+                <div className="p-6 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="text-2xl bg-white p-3 rounded-full shadow-sm">
+                      {invoice.customer?.name?.[0]?.toUpperCase() || "C"}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-gray-800">
+                        {invoice.customer?.name || "Cliente General"}
+                      </h4>
+                      <p className="text-sm text-gray-600">
+                        {invoice.customer?.email || "Sin correo"}
+                      </p>
+                    </div>
+                  </div>
+                  {invoice.customer?.rfc && (
+                    <div className="p-3 bg-white/80 rounded-lg">
+                      <span className="text-gray-600">RFC:</span>
+                      <span className="font-medium ml-2">
+                        {invoice.customer.rfc}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Productos/Servicios */}
+            <div className="mb-8">
+              <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                <div className="text-2xl bg-white p-3 rounded-xl shadow-sm">
+                  📦
+                </div>
+                Conceptos ({invoice.invoiceItems?.length || 0})
+              </h3>
+              <div className="overflow-x-auto rounded-xl border border-gray-200">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-gradient-to-r from-gray-900 to-gray-800 text-white">
+                      <th className="px-6 py-4 text-left font-semibold">
+                        Descripción
+                      </th>
+                      <th className="px-6 py-4 text-left font-semibold">
+                        Cantidad
+                      </th>
+                      <th className="px-6 py-4 text-left font-semibold">
+                        Precio Unitario
+                      </th>
+                      <th className="px-6 py-4 text-left font-semibold">
+                        Total
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invoice.invoiceItems?.map((item, index) => (
+                      <tr
+                        key={index}
+                        className="border-b border-gray-200 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200"
+                      >
+                        <td className="px-6 py-4">
+                          <div className="font-medium text-gray-800">
+                            {item.saleItem?.description || "Sin descripción"}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-gray-800">{item.quantity}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="font-medium text-gray-800">
+                            {formatCurrency(item.unitPrice)}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="font-bold text-green-600">
+                            {formatCurrency(item.totalPrice)}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Totales */}
+            <div>
+              <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                <div className="text-2xl bg-white p-3 rounded-xl shadow-sm">
+                  💰
+                </div>
+                Resumen de Totales
+              </h3>
+              <div className="max-w-md ml-auto">
+                <div className="p-6 rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 border border-gray-200">
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-700">Subtotal:</span>
+                      <span className="font-bold text-gray-800">
+                        {formatCurrency(invoice.subtotal)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-700">IVA (16%):</span>
+                      <span className="font-bold text-gray-800">
+                        {formatCurrency(invoice.taxes)}
+                      </span>
+                    </div>
+                    <div className="border-t border-gray-300 pt-4 mt-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xl font-bold text-gray-900">
+                          Total:
+                        </span>
+                        <span className="text-2xl font-bold text-blue-600">
+                          {formatCurrency(total)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Acciones */}
+        <div className="mt-8 flex flex-wrap gap-4 justify-end">
+          {invoice.status === "pending" && (
+            <StampInvoiceButton
               invoiceId={invoice.id!}
-              onCancelled={() => {
-                // Recargar la página para ver los cambios
-                router.refresh();
-              }}
+              onStamped={handleStamped}
             />
-            {invoice.verificationUrl && (
+          )}
+
+          {invoice.status === "stamped" && (
+            <>
               <a
-                href={invoice.verificationUrl}
+                href={`/api/invoices/${invoice.id}/pdf`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+                className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center"
               >
-                Verificar en SAT
+                <span className="mr-2">📄</span>
+                Descargar PDF
               </a>
-            )}
-          </>
-        )}
+
+              <CancelInvoiceButton
+                invoiceId={invoice.id!}
+                onCancelled={() => router.refresh()}
+              />
+
+              {invoice.verificationUrl && (
+                <a
+                  href={invoice.verificationUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-green-600 hover:to-emerald-600 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center"
+                >
+                  <span className="mr-2">🔍</span>
+                  Verificar en SAT
+                </a>
+              )}
+            </>
+          )}
+
+          {invoice.status === "cancelled" && (
+            <div className="w-full p-6 rounded-2xl bg-gradient-to-r from-red-50 to-pink-50 border border-red-200">
+              <div className="flex items-center gap-3">
+                <div className="text-2xl">❌</div>
+                <div>
+                  <p className="font-semibold text-red-800">
+                    Factura cancelada
+                  </p>
+                  <p className="text-red-600 text-sm">
+                    Esta factura ha sido cancelada el{" "}
+                    {formatDate(invoice.cancelledAt)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
