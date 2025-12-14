@@ -20,7 +20,7 @@
     "html2canvas": "^1.4.1",
     "jsonwebtoken": "^9.0.2",
     "jspdf": "^3.0.2",
-    "next": "15.5.2",
+    "next": "^16.0.10",
     "nodemailer": "^7.0.6",
     "papaparse": "^5.5.3",
     "prisma": "^6.15.0",
