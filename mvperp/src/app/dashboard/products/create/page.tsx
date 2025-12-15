@@ -1,6 +1,5 @@
 // src/app/dashboard/products/create/page.tsx
 "use client";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Product, Variant, PriceList } from "@/types/product";
@@ -27,6 +26,7 @@ export default function CreateProduct() {
     name: "",
     price: 0,
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -37,7 +37,6 @@ export default function CreateProduct() {
   ) => {
     const target = e.target;
     let value: string | number | boolean | undefined;
-
     if (target.type === "checkbox") {
       value = (target as HTMLInputElement).checked;
     } else if (target.type === "number") {
@@ -45,7 +44,6 @@ export default function CreateProduct() {
     } else {
       value = target.value;
     }
-
     setForm((prev) => ({
       ...prev,
       [target.name]: value,
@@ -91,16 +89,20 @@ export default function CreateProduct() {
     setError("");
 
     try {
+      const formData = new FormData();
       const productData = {
         ...form,
         variants,
         priceLists,
       };
+      formData.append("product", JSON.stringify(productData));
+      if (imageFile) {
+        formData.append("image", imageFile);
+      }
 
       const res = await fetch("/api/products", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(productData),
+        body: formData,
         credentials: "include",
       });
 
@@ -190,6 +192,40 @@ export default function CreateProduct() {
             Información Básica
           </h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Imagen del producto
+              </label>
+              <div className="relative w-full h-64 border border-gray-300 rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center">
+                {form.image ? (
+                  <img
+                    src={form.image}
+                    alt="Previsualización"
+                    className="object-contain p-4 w-full h-full"
+                  />
+                ) : (
+                  <span className="text-gray-500">Sin imagen</span>
+                )}
+              </div>
+              <div className="mt-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Subir imagen local (opcional)
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) {
+                      const file = e.target.files[0];
+                      setImageFile(file);
+                      const url = URL.createObjectURL(file);
+                      setForm((prev) => ({ ...prev, image: url }));
+                    }
+                  }}
+                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+              </div>
+            </div>
             <div className="space-y-5">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -205,7 +241,6 @@ export default function CreateProduct() {
                   placeholder="Ej: Camisa de algodón"
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Tipo *
@@ -220,7 +255,6 @@ export default function CreateProduct() {
                   <option value="servicio">Servicio</option>
                 </select>
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   SKU
@@ -234,7 +268,6 @@ export default function CreateProduct() {
                   placeholder="Código único del producto"
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Código de barras
@@ -248,7 +281,6 @@ export default function CreateProduct() {
                 />
               </div>
             </div>
-
             <div className="space-y-5">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -263,7 +295,6 @@ export default function CreateProduct() {
                   placeholder="Ropa, Electrónicos, etc."
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Marca
@@ -276,7 +307,6 @@ export default function CreateProduct() {
                   className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Descripción
@@ -330,7 +360,6 @@ export default function CreateProduct() {
                   placeholder="0.00"
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Costo
@@ -345,7 +374,6 @@ export default function CreateProduct() {
                   placeholder="0.00"
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Stock inicial
@@ -359,7 +387,6 @@ export default function CreateProduct() {
                   placeholder="0"
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Cantidad mínima
@@ -373,7 +400,6 @@ export default function CreateProduct() {
                   placeholder="5"
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Unidad de venta
@@ -387,7 +413,6 @@ export default function CreateProduct() {
                   placeholder="Pieza, Paquete, etc."
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Ubicación en almacén
@@ -401,7 +426,6 @@ export default function CreateProduct() {
                   placeholder="Pasillo A, Estante 3"
                 />
               </div>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                 {[
                   { name: "useStock", label: "Controlar stock" },
@@ -431,7 +455,6 @@ export default function CreateProduct() {
               </div>
             </div>
           </div>
-
           {/* Información Fiscal */}
           <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
             <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
@@ -466,7 +489,6 @@ export default function CreateProduct() {
                   placeholder="10101500"
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Clave SAT (Unidad)
@@ -480,7 +502,6 @@ export default function CreateProduct() {
                   placeholder="H87"
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   IVA (%)
@@ -495,7 +516,6 @@ export default function CreateProduct() {
                   placeholder="16.00"
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   IEPS (%)
@@ -510,7 +530,6 @@ export default function CreateProduct() {
                   placeholder="0.00"
                 />
               </div>
-
               <div className="flex items-center gap-3 pt-2">
                 <input
                   type="checkbox"
@@ -574,7 +593,6 @@ export default function CreateProduct() {
               Agregar Variante
             </button>
           </div>
-
           {variants.length > 0 ? (
             <div className="space-y-3">
               {variants.map((variant, index) => (
@@ -654,7 +672,6 @@ export default function CreateProduct() {
               Agregar Lista
             </button>
           </div>
-
           {priceLists.length > 0 ? (
             <div className="space-y-3">
               {priceLists.map((priceList, index) => (

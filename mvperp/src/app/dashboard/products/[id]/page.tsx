@@ -1,6 +1,5 @@
 // src/app/dashboard/products/[id]/page.tsx
 "use client";
-
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Product, Variant, PriceList } from "@/types/product";
@@ -11,7 +10,6 @@ export default function ProductDetail() {
   const router = useRouter();
   const params = useParams();
   const productId = params.id as string;
-
   const [form, setForm] = useState<Product | null>(null);
   const [image, setImage] = useState("");
   const [originalForm, setOriginalForm] = useState<Product | null>(null);
@@ -27,6 +25,7 @@ export default function ProductDetail() {
     name: "",
     price: 0,
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   const fetchImage = async (imageKey: string) => {
     try {
@@ -51,7 +50,9 @@ export default function ProductDetail() {
         const data = await res.json();
         setForm(data.product);
         setOriginalForm(data.product);
-        if (data.product.sku) {
+        if (data.product.image) {
+          setImage(data.product.image);
+        } else if (data.product.sku) {
           fetchImage(data.product.sku);
         }
       } catch (err) {
@@ -69,7 +70,6 @@ export default function ProductDetail() {
   ) => {
     const target = e.target;
     let newValue: string | number | boolean | undefined;
-
     if (target.type === "checkbox") {
       newValue = (target as HTMLInputElement).checked;
     } else if (target.type === "number") {
@@ -77,7 +77,6 @@ export default function ProductDetail() {
     } else {
       newValue = target.value;
     }
-
     setForm((prev) => (prev ? { ...prev, [target.name]: newValue } : prev));
   };
 
@@ -147,15 +146,19 @@ export default function ProductDetail() {
     setLoading(true);
 
     try {
+      const formData = new FormData();
+      formData.append("product", JSON.stringify(form));
+      if (imageFile) {
+        formData.append("image", imageFile);
+      }
+
       const res = await fetch(`/api/products/${productId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: formData,
         credentials: "include",
       });
 
       if (!res.ok) throw new Error("Error al actualizar producto");
-
       const updatedData = await res.json();
       setForm(updatedData.product);
       setOriginalForm(updatedData.product);
@@ -173,6 +176,7 @@ export default function ProductDetail() {
   const handleCancel = () => {
     setForm(originalForm);
     setIsEditing(false);
+    setImageFile(null);
   };
 
   const handleDelete = async () => {
@@ -241,7 +245,6 @@ export default function ProductDetail() {
             {isEditing ? "Editar Producto" : "Detalles del Producto"}
           </h1>
         </div>
-
         {!isEditing ? (
           <button
             onClick={() => setIsEditing(true)}
@@ -418,11 +421,32 @@ export default function ProductDetail() {
                   <span className="text-gray-500">Sin imagen</span>
                 )}
               </div>
-              {isEditing && form.sku && (
+              {isEditing && form.sku && !form.image && (
                 <p className="text-xs text-gray-500 mt-2">
                   Imagen asociada al SKU:{" "}
                   <span className="font-mono">{form.sku}</span>
                 </p>
+              )}
+
+              {isEditing && (
+                <div className="mt-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Subir imagen local (opcional)
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) {
+                        const file = e.target.files[0];
+                        setImageFile(file);
+                        const url = URL.createObjectURL(file);
+                        setImage(url);
+                      }
+                    }}
+                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  />
+                </div>
               )}
             </div>
             <div className="space-y-5">
@@ -445,7 +469,6 @@ export default function ProductDetail() {
                   </div>
                 )}
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Tipo *
@@ -466,7 +489,6 @@ export default function ProductDetail() {
                   </div>
                 )}
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   SKU
@@ -485,7 +507,6 @@ export default function ProductDetail() {
                   </div>
                 )}
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Código de barras
@@ -504,7 +525,6 @@ export default function ProductDetail() {
                   </div>
                 )}
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Categoría
@@ -523,7 +543,6 @@ export default function ProductDetail() {
                   </div>
                 )}
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Marca
@@ -542,7 +561,6 @@ export default function ProductDetail() {
                   </div>
                 )}
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Descripción
@@ -606,7 +624,6 @@ export default function ProductDetail() {
                   </div>
                 )}
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Costo
@@ -626,7 +643,6 @@ export default function ProductDetail() {
                   </div>
                 )}
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Stock actual
@@ -651,7 +667,6 @@ export default function ProductDetail() {
                   </div>
                 )}
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Cantidad mínima
@@ -670,7 +685,6 @@ export default function ProductDetail() {
                   </div>
                 )}
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Unidad de venta
@@ -689,7 +703,6 @@ export default function ProductDetail() {
                   </div>
                 )}
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Ubicación en almacén
@@ -708,7 +721,6 @@ export default function ProductDetail() {
                   </div>
                 )}
               </div>
-
               {/* Checkboxes */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                 {[
@@ -748,7 +760,6 @@ export default function ProductDetail() {
               </div>
             </div>
           </div>
-
           {/* Información Fiscal */}
           <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
             <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
@@ -788,7 +799,6 @@ export default function ProductDetail() {
                   </div>
                 )}
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Clave SAT (Unidad)
@@ -807,7 +817,6 @@ export default function ProductDetail() {
                   </div>
                 )}
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   IVA (%)
@@ -827,7 +836,6 @@ export default function ProductDetail() {
                   </div>
                 )}
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   IEPS (%)
@@ -847,7 +855,6 @@ export default function ProductDetail() {
                   </div>
                 )}
               </div>
-
               <div className="flex items-center gap-3 pt-2">
                 {isEditing ? (
                   <input
@@ -921,7 +928,6 @@ export default function ProductDetail() {
                 Agregar Variante
               </button>
             </div>
-
             {form.variants && form.variants.length > 0 ? (
               <div className="space-y-3">
                 {form.variants.map((variant, index) => (
@@ -1003,7 +1009,6 @@ export default function ProductDetail() {
                 Agregar Lista
               </button>
             </div>
-
             {form.priceLists && form.priceLists.length > 0 ? (
               <div className="space-y-3">
                 {form.priceLists.map((priceList, index) => (

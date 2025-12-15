@@ -2,10 +2,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { prisma } from "@/lib/prisma";
+import { writeFile } from "fs/promises";
+import { mkdir } from "fs/promises";
+import path from "path";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// Interfaces para los tipos de datos
+// Interfaces (ya las tienes, pero las dejamos por claridad)
 interface VariantData {
   type: string;
   value: string;
@@ -78,16 +81,30 @@ export async function POST(req: NextRequest) {
       { error: "JWT secret no definido" },
       { status: 500 }
     );
-
   const token = req.cookies.get("token")?.value;
   if (!token)
     return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
   try {
     const payload = jwt.verify(token, JWT_SECRET) as { userId: string };
-    const body: ProductRequestBody = await req.json();
+    const formData = await req.formData();
+    const bodyRaw = formData.get("product") as string;
+    const body: ProductRequestBody = JSON.parse(bodyRaw);
 
-    // Crear el producto
+    let imageUrl = body.image || undefined;
+
+    const imageFile = formData.get("image") as File | null;
+    if (imageFile && imageFile.size > 0) {
+      const bytes = await imageFile.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      const ext = (imageFile.name.split(".").pop() || "jpg").toLowerCase();
+      const filename = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
+      const uploadDir = path.join(process.cwd(), "public", "uploads");
+      await mkdir(uploadDir, { recursive: true });
+      await writeFile(path.join(uploadDir, filename), buffer);
+      imageUrl = `/uploads/${filename}`;
+    }
+
     const product = await prisma.product.create({
       data: {
         userId: payload.userId,
@@ -106,8 +123,8 @@ export async function POST(req: NextRequest) {
         quantity: body.quantity ?? 0,
         price: body.price ?? 0,
         cost: body.cost ?? 0,
-        stock: body.quantity ?? 0,
-        image: body.image,
+        stock: body.stock ?? body.quantity ?? 0,
+        image: imageUrl,
         location: body.location,
         minimumQuantity: body.minimumQuantity,
         satKey: body.satKey,
@@ -118,7 +135,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Crear variantes si existen
     if (body.variants && body.variants.length > 0) {
       await prisma.variant.createMany({
         data: body.variants.map((variant) => ({
@@ -129,7 +145,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Crear listas de precios si existen
     if (body.priceLists && body.priceLists.length > 0) {
       await prisma.priceList.createMany({
         data: body.priceLists.map((priceList) => ({
@@ -140,25 +155,16 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Obtener el producto completo con relaciones
     const productWithRelations = await prisma.product.findUnique({
       where: { id: product.id },
-      include: {
-        variants: true,
-        priceLists: true,
-      },
+      include: { variants: true, priceLists: true },
     });
 
     return NextResponse.json({ product: productWithRelations });
   } catch (err: unknown) {
-    console.error(err);
-
+    console.error("Error en POST /api/products:", err);
     let message = "Error al crear el producto";
-
-    if (err instanceof Error) {
-      message = err.message;
-    }
-
+    if (err instanceof Error) message = err.message;
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
