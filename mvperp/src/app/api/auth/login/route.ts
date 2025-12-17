@@ -16,7 +16,18 @@ export async function POST(req: NextRequest) {
   try {
     const { email, password } = await req.json();
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    // ✅ CAMBIO CLAVE AQUÍ
+    const user = await prisma.user.findFirst({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        password: true,
+        companyId: true,
+      },
+    });
+
     if (!user) {
       return NextResponse.json(
         { error: "Usuario no encontrado" },
@@ -33,22 +44,31 @@ export async function POST(req: NextRequest) {
     }
 
     const token = jwt.sign(
-      { userId: user.id, email: user.email, name: user.name },
+      {
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+        companyId: user.companyId,
+      },
       JWT_SECRET,
       { expiresIn: "1h" }
     );
 
     const response = NextResponse.json({
-      user: { id: user.id, email: user.email, name: user.name },
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        companyId: user.companyId,
+      },
     });
 
-    // 👇 Setear cookie HttpOnly
     response.cookies.set("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // en prod solo sobre HTTPS
+      secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
       path: "/",
-      maxAge: 60 * 60, // 1 hora
+      maxAge: 60 * 60,
     });
 
     return response;

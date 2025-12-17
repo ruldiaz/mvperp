@@ -1,12 +1,13 @@
-// src/app/api/customers/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { UpdateCustomerRequest } from "@/types/customer";
 import jwt from "jsonwebtoken";
+import { UpdateCustomerRequest } from "@/types/customer";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// Función auxiliar para verificar el token
+/* =========================
+   AUTH
+========================= */
 async function verifyAuth(request: NextRequest) {
   if (!JWT_SECRET) {
     return { error: "JWT secret no definido", status: 500 };
@@ -21,47 +22,47 @@ async function verifyAuth(request: NextRequest) {
     const payload = jwt.verify(token, JWT_SECRET) as {
       userId: string;
       email: string;
-      name?: string;
+      companyId: string;
     };
+
     return { user: payload };
   } catch {
     return { error: "Token inválido o expirado", status: 401 };
   }
 }
 
+/* =========================
+   GET /customers/:id
+========================= */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await verifyAuth(request);
+  if ("error" in auth) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
+  const { id } = await params;
+
   try {
-    const authResult = await verifyAuth(request);
-    if ("error" in authResult) {
-      return NextResponse.json(
-        { error: authResult.error },
-        { status: authResult.status }
-      );
-    }
-
-    // Await params antes de usarlos
-    const { id } = await params;
-
-    const customer = await prisma.customer.findUnique({
-      where: { id },
+    const customer = await prisma.customer.findFirst({
+      where: {
+        id,
+        companyId: auth.user.companyId,
+      },
       include: {
         sales: {
+          orderBy: { createdAt: "desc" },
           include: {
             saleItems: {
               include: {
                 product: {
-                  select: {
-                    name: true,
-                    sku: true,
-                  },
+                  select: { name: true, sku: true },
                 },
               },
             },
           },
-          orderBy: { createdAt: "desc" },
         },
       },
     });
@@ -75,7 +76,7 @@ export async function GET(
 
     return NextResponse.json({ customer });
   } catch (error) {
-    console.error("Error fetching customer:", error);
+    console.error("GET CUSTOMER ERROR:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -83,32 +84,40 @@ export async function GET(
   }
 }
 
+/* =========================
+   PUT /customers/:id
+========================= */
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await verifyAuth(request);
+  if ("error" in auth) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
+  const { id } = await params;
+  const body: UpdateCustomerRequest = await request.json();
+
   try {
-    const authResult = await verifyAuth(request);
-    if ("error" in authResult) {
-      return NextResponse.json(
-        { error: authResult.error },
-        { status: authResult.status }
-      );
-    }
-
-    // Await params antes de usarlos
-    const { id } = await params;
-
-    const body: UpdateCustomerRequest = await request.json();
-
-    const customer = await prisma.customer.update({
-      where: { id },
+    const customer = await prisma.customer.updateMany({
+      where: {
+        id,
+        companyId: auth.user.companyId,
+      },
       data: body,
     });
 
-    return NextResponse.json({ customer });
+    if (customer.count === 0) {
+      return NextResponse.json(
+        { error: "Customer not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error updating customer:", error);
+    console.error("UPDATE CUSTOMER ERROR:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -116,41 +125,52 @@ export async function PUT(
   }
 }
 
+/* =========================
+   DELETE /customers/:id
+========================= */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await verifyAuth(request);
+  if ("error" in auth) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
+  const { id } = await params;
+
   try {
-    const authResult = await verifyAuth(request);
-    if ("error" in authResult) {
-      return NextResponse.json(
-        { error: authResult.error },
-        { status: authResult.status }
-      );
-    }
-
-    // Await params antes de usarlos
-    const { id } = await params;
-
-    // Check if customer has sales
     const salesCount = await prisma.sale.count({
-      where: { customerId: id },
+      where: {
+        customerId: id,
+        companyId: auth.user.companyId,
+      },
     });
 
     if (salesCount > 0) {
       return NextResponse.json(
-        { error: "Cannot delete customer with existing sales" },
+        { error: "No se puede eliminar un cliente con ventas" },
         { status: 400 }
       );
     }
 
-    await prisma.customer.delete({
-      where: { id },
+    const deleted = await prisma.customer.deleteMany({
+      where: {
+        id,
+        companyId: auth.user.companyId,
+      },
     });
+
+    if (deleted.count === 0) {
+      return NextResponse.json(
+        { error: "Customer not found" },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json({ message: "Customer deleted successfully" });
   } catch (error) {
-    console.error("Error deleting customer:", error);
+    console.error("DELETE CUSTOMER ERROR:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

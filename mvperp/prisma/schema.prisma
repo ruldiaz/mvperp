@@ -10,7 +10,7 @@ datasource db {
 
 model User {
   id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email       String     @unique
+  email       String     
   password    String
   name        String?
   createdAt   DateTime   @default(now())
@@ -18,6 +18,7 @@ model User {
 
   companyId   String?    @db.Uuid
   company     Company?   @relation(fields: [companyId], references: [id])
+  @@unique([companyId, email])
 
   products    Product[]   // relación 1:N con productos
   movements   Movement[]  // relación 1:N con movimientos
@@ -28,13 +29,19 @@ model User {
 
 model Product {
   id                  String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  companyId String   @db.Uuid
+  company   Company  @relation(fields: [companyId], references: [id])
+
   userId              String       @db.Uuid
   user                User         @relation(fields: [userId], references: [id])
+
   name                String
   type                String       // producto o servicio
   barcode             String?
   category            String?
   sku                 String?
+  @@unique([companyId, sku])
   sellAtPOS           Boolean      @default(false)
   includeInCatalog    Boolean      @default(false)
   requirePrescription Boolean      @default(false)
@@ -98,6 +105,8 @@ model Movement {
 
 model Supplier {
   id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId         String   @db.Uuid
+  company           Company  @relation(fields: [companyId], references: [id])
   name              String
   contactName       String?
   phone             String?
@@ -119,6 +128,8 @@ model Supplier {
 
 model Purchase {
   id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId         String   @db.Uuid  // ← AÑADIDO para consultas directas
+  company           Company  @relation(fields: [companyId], references: [id])
   supplierId        String   @db.Uuid
   supplier          Supplier @relation(fields: [supplierId], references: [id])
   userId            String   @db.Uuid
@@ -147,9 +158,14 @@ model PurchaseItem {
 
 model Customer {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  companyId   String   @db.Uuid
+  company     Company  @relation(fields: [companyId], references: [id])
+
   name        String
   razonSocial String?   // Nombre fiscal
-  email       String?  @unique
+  email       String?  
+  @@unique([companyId, email])
   phone       String?
   address     String?
   rfc         String?
@@ -175,6 +191,8 @@ model Customer {
 
 model Sale {
   id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   String     @db.Uuid  // ← AÑADIDO para consultas directas
+  company     Company    @relation(fields: [companyId], references: [id])
   customerId  String     @db.Uuid
   customer    Customer   @relation(fields: [customerId], references: [id])
   userId      String     @db.Uuid
@@ -242,6 +260,12 @@ model Company {
 
   users          User[]
   invoices       Invoice[]
+  suppliers      Supplier[]
+  customers      Customer[]
+  products       Product[]
+  purchases      Purchase[]
+  sales          Sale[]
+  quotations     Quotation[]
 }
 
 model Invoice {
@@ -296,6 +320,8 @@ model InvoiceItem {
 
 model Quotation {
   id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId   String     @db.Uuid  // ← AÑADIDO para consultas directas
+  company     Company    @relation(fields: [companyId], references: [id])
   customerId  String     @db.Uuid
   customer    Customer   @relation(fields: [customerId], references: [id])
   userId      String     @db.Uuid

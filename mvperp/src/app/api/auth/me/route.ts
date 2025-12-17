@@ -3,6 +3,13 @@ import jwt from "jsonwebtoken";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
+interface JwtPayload {
+  userId: string;
+  email: string;
+  name?: string;
+  companyId: string;
+}
+
 export async function GET(req: NextRequest) {
   if (!JWT_SECRET) {
     return NextResponse.json(
@@ -17,13 +24,23 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as {
-      userId: string;
-      email: string;
-      name?: string;
-    };
+    const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
 
-    return NextResponse.json({ user: payload });
+    if (!payload.companyId) {
+      return NextResponse.json(
+        { error: "Usuario sin empresa asociada" },
+        { status: 403 }
+      );
+    }
+
+    return NextResponse.json({
+      user: {
+        userId: payload.userId,
+        email: payload.email,
+        name: payload.name,
+        companyId: payload.companyId,
+      },
+    });
   } catch {
     return NextResponse.json(
       { error: "Token inválido o expirado" },

@@ -8,6 +8,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 interface JwtPayload {
   userId: string;
+  companyId: string; // Asegúrate de incluir companyId en el payload del token
   email: string;
   name?: string;
 }
@@ -27,9 +28,18 @@ export async function POST(req: NextRequest) {
     }
 
     let userId: string;
+    let companyId: string;
     try {
       const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
       userId = payload.userId;
+      companyId = payload.companyId;
+
+      if (!companyId) {
+        return NextResponse.json(
+          { error: "No se pudo identificar la empresa" },
+          { status: 400 }
+        );
+      }
     } catch {
       return NextResponse.json(
         { error: "Token inválido o expirado" },
@@ -55,6 +65,40 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Verificar que el proveedor pertenezca a la misma empresa
+    const supplier = await prisma.supplier.findFirst({
+      where: {
+        id: supplierId,
+        companyId: companyId,
+      },
+    });
+
+    if (!supplier) {
+      return NextResponse.json(
+        { error: "Proveedor no encontrado o no pertenece a esta empresa" },
+        { status: 404 }
+      );
+    }
+
+    // Verificar que los productos pertenezcan a la misma empresa
+    for (const item of items) {
+      const product = await prisma.product.findFirst({
+        where: {
+          id: item.productId,
+          companyId: companyId,
+        },
+      });
+
+      if (!product) {
+        return NextResponse.json(
+          {
+            error: `Producto con ID ${item.productId} no encontrado o no pertenece a esta empresa`,
+          },
+          { status: 404 }
+        );
+      }
+    }
+
     const totalAmount = items.reduce(
       (sum: number, item: PurchaseItemRequest) => {
         return sum + item.quantity * item.unitPrice;
@@ -64,6 +108,7 @@ export async function POST(req: NextRequest) {
 
     const purchase = await prisma.purchase.create({
       data: {
+        companyId: companyId, // ← AÑADIDO
         supplierId,
         userId,
         totalAmount,
@@ -83,8 +128,11 @@ export async function POST(req: NextRequest) {
     });
 
     for (const item of items) {
-      const product = await prisma.product.findUnique({
-        where: { id: item.productId },
+      const product = await prisma.product.findFirst({
+        where: {
+          id: item.productId,
+          companyId: companyId, // ← Asegurar que el producto pertenece a la empresa
+        },
       });
 
       if (product) {
@@ -113,7 +161,10 @@ export async function POST(req: NextRequest) {
     }
 
     await prisma.supplier.update({
-      where: { id: supplierId },
+      where: {
+        id: supplierId,
+        companyId: companyId, // ← Asegurar que el proveedor pertenece a la empresa
+      },
       data: {
         totalPurchases: { increment: totalAmount },
         lastPurchase: new Date(),
@@ -145,9 +196,18 @@ export async function GET(req: NextRequest) {
     }
 
     let userId: string;
+    let companyId: string;
     try {
       const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
       userId = payload.userId;
+      companyId = payload.companyId;
+
+      if (!companyId) {
+        return NextResponse.json(
+          { error: "No se pudo identificar la empresa" },
+          { status: 400 }
+        );
+      }
     } catch {
       return NextResponse.json(
         { error: "Token inválido o expirado" },
@@ -156,7 +216,10 @@ export async function GET(req: NextRequest) {
     }
 
     const purchases = await prisma.purchase.findMany({
-      where: { userId },
+      where: {
+        companyId: companyId, // ← FILTRADO POR EMPRESA
+        userId, // Opcional: si quieres filtrar también por usuario
+      },
       include: {
         user: {
           select: {
@@ -168,7 +231,16 @@ export async function GET(req: NextRequest) {
             name: true,
           },
         },
-        purchaseItems: true,
+        purchaseItems: {
+          include: {
+            product: {
+              select: {
+                name: true,
+                sku: true,
+              },
+            },
+          },
+        },
       },
       orderBy: {
         createdAt: "desc",

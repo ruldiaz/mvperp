@@ -1,4 +1,3 @@
-// src/app/api/products/import/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import jwt from "jsonwebtoken";
@@ -11,7 +10,14 @@ import {
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// Función para parsear números correctamente
+interface JwtPayload {
+  userId: string;
+  companyId: string;
+}
+
+/* =========================
+   Helpers
+========================= */
 const parseNumber = (value: string): number => {
   if (!value) return 0;
   const cleaned = value.replace(/[^\d.,]/g, "");
@@ -20,19 +26,15 @@ const parseNumber = (value: string): number => {
   return isNaN(num) ? 0 : num;
 };
 
-// Función para parsear booleanos
 const parseBoolean = (value: string): boolean => {
   if (!value) return false;
   const val = value.toString().toLowerCase().trim();
-  return (
-    val === "true" ||
-    val === "1" ||
-    val === "si" ||
-    val === "sí" ||
-    val === "yes"
-  );
+  return ["true", "1", "si", "sí", "yes"].includes(val);
 };
 
+/* =========================
+   POST /api/products/import
+========================= */
 export async function POST(req: NextRequest) {
   if (!JWT_SECRET) {
     return NextResponse.json(
@@ -47,10 +49,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as { userId: string };
+    const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
+
     const formData = await req.formData();
-    const file = formData.get("file") as File;
-    const configJson = formData.get("config") as string;
+    const file = formData.get("file") as File | null;
+    const configJson = formData.get("config") as string | null;
 
     if (!file) {
       return NextResponse.json(
@@ -92,17 +95,16 @@ export async function POST(req: NextRequest) {
           },
         };
 
-    const fileBuffer = await file.arrayBuffer();
-    const fileContent = Buffer.from(fileBuffer).toString("utf-8");
+    const buffer = Buffer.from(await file.arrayBuffer()).toString("utf-8");
 
-    const records = parse(fileContent, {
+    const records: string[][] = parse(buffer, {
       delimiter: config.delimiter,
       skip_empty_lines: true,
-      relax_column_count: true,
       trim: true,
+      relax_column_count: true,
     });
 
-    const headers = config.hasHeaders && records.length > 0 ? records[0] : [];
+    const headers: string[] = config.hasHeaders ? records[0] : [];
     const startRow = config.hasHeaders ? 1 : 0;
 
     const result: ImportResult = {
@@ -113,6 +115,7 @@ export async function POST(req: NextRequest) {
 
     for (let i = startRow; i < records.length; i++) {
       const row = records[i];
+
       const detail: ImportDetail = {
         row: i + 1,
         productName: "",
@@ -121,40 +124,34 @@ export async function POST(req: NextRequest) {
       };
 
       try {
-        // Map CSV columns to product fields based on configuration
         const productData: Record<string, string> = {};
 
-        Object.entries(config.mapping).forEach(([field, columnName]) => {
-          let columnIndex = -1;
+        Object.entries(config.mapping).forEach(([field, column]) => {
+          let index = -1;
 
-          if (config.hasHeaders && headers.length > 0) {
-            // Buscar por nombre de columna en los headers
-            columnIndex = headers.findIndex(
-              (header) =>
-                header.toLowerCase().trim() === columnName.toLowerCase().trim()
+          if (config.hasHeaders && column) {
+            index = headers.findIndex(
+              (h: string) =>
+                h.toLowerCase().trim() ===
+                column.toString().toLowerCase().trim()
             );
-          } else {
-            // Si no hay headers, asumir que columnName es el índice
-            columnIndex = parseInt(columnName);
-            if (isNaN(columnIndex)) columnIndex = -1;
+          } else if (column) {
+            const colIndex = parseInt(column.toString());
+            index = isNaN(colIndex) ? -1 : colIndex;
           }
 
-          if (columnIndex >= 0 && columnIndex < row.length) {
-            productData[field] = row[columnIndex] || "";
-          } else {
-            productData[field] = "";
-          }
+          productData[field] =
+            index >= 0 && index < row.length ? row[index] : "";
         });
 
         detail.productName = productData.name || `Fila ${i + 1}`;
 
-        // Validate required fields
         if (!productData.name) {
           throw new Error("Nombre es requerido");
         }
 
-        // Convert string values to appropriate types
-        const product = {
+        const productPayload = {
+          companyId: payload.companyId,
           userId: payload.userId,
           name: productData.name,
           type: productData.type || "producto",
@@ -173,7 +170,7 @@ export async function POST(req: NextRequest) {
           quantity: parseNumber(productData.quantity),
           price: parseNumber(productData.price),
           cost: parseNumber(productData.cost),
-          stock: parseNumber(productData.stock || productData.quantity),
+          stock: parseNumber(productData.stock || productData.quantity || "0"),
           image: productData.image || undefined,
           location: productData.location || undefined,
           minimumQuantity: productData.minimumQuantity
@@ -188,47 +185,50 @@ export async function POST(req: NextRequest) {
             : true,
         };
 
-        // Check if product already exists (by SKU or name)
+        /* ===== Buscar duplicado SOLO en la empresa ===== */
+        const orConditions = [];
+
+        if (productPayload.sku) {
+          orConditions.push({ sku: productPayload.sku });
+        }
+        orConditions.push({ name: productPayload.name });
+
         const existingProduct = await prisma.product.findFirst({
           where: {
-            userId: payload.userId,
-            OR: [{ sku: product.sku || "" }, { name: product.name }],
+            companyId: payload.companyId,
+            OR: orConditions,
           },
         });
 
         if (existingProduct) {
-          // Update existing product
           await prisma.product.update({
             where: { id: existingProduct.id },
-            data: product,
+            data: productPayload,
           });
           detail.message = "Producto actualizado";
         } else {
-          // Create new product
           await prisma.product.create({
-            data: product,
+            data: productPayload,
           });
           detail.message = "Producto creado";
         }
 
         detail.status = "success";
         result.success++;
-      } catch (error: unknown) {
-        detail.status = "error";
+      } catch (err: unknown) {
         detail.message =
-          error instanceof Error ? error.message : "Error desconocido";
+          err instanceof Error ? err.message : "Error desconocido";
         result.errors++;
-        console.error(`Error en fila ${i + 1}:`, error);
       }
 
       result.details.push(detail);
     }
 
     return NextResponse.json(result);
-  } catch (error: unknown) {
+  } catch (error) {
     console.error("Import error:", error);
     return NextResponse.json(
-      { error: "Error processing CSV file" },
+      { error: "Error al procesar el archivo CSV" },
       { status: 500 }
     );
   }

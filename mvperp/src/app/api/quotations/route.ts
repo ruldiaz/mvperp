@@ -6,6 +6,13 @@ import jwt from "jsonwebtoken";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
+interface JwtPayload {
+  userId: string;
+  companyId: string;
+  email: string;
+  name?: string;
+}
+
 async function verifyAuth(request: NextRequest) {
   if (!JWT_SECRET) {
     return { error: "JWT secret no definido", status: 500 };
@@ -17,11 +24,10 @@ async function verifyAuth(request: NextRequest) {
   }
 
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as {
-      userId: string;
-      email: string;
-      name?: string;
-    };
+    const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    if (!payload.companyId) {
+      return { error: "No se pudo identificar la empresa", status: 400 };
+    }
     return { user: payload };
   } catch {
     return { error: "Token inválido o expirado", status: 401 };
@@ -38,24 +44,57 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const { user } = authResult;
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
     const search = searchParams.get("search") || "";
+    const customerId = searchParams.get("customerId") || "";
+    const status = searchParams.get("status") || "";
 
     const skip = (page - 1) * limit;
 
-    // CORRECCIÓN: Solo buscar por nombre del cliente, no por ID
-    const whereCondition: Prisma.QuotationWhereInput = search
-      ? {
-          customer: {
-            name: {
-              contains: search,
-              mode: "insensitive" as Prisma.QueryMode,
-            },
-          },
-        }
-      : {};
+    // Construir condición WHERE con companyId
+    const whereCondition: Prisma.QuotationWhereInput = {
+      companyId: user.companyId, // ← FILTRADO POR EMPRESA
+    };
+
+    // Añadir búsqueda por nombre del cliente si existe
+    if (search) {
+      whereCondition.customer = {
+        name: {
+          contains: search,
+          mode: "insensitive" as Prisma.QueryMode,
+        },
+      };
+    }
+
+    // Filtrar por cliente si se especifica
+    if (customerId) {
+      whereCondition.customerId = customerId;
+    }
+
+    // Filtrar por estado si se especifica
+    if (status) {
+      whereCondition.status = status;
+    }
+
+    // Verificar que el cliente pertenezca a la empresa (si se especifica)
+    if (customerId) {
+      const customer = await prisma.customer.findFirst({
+        where: {
+          id: customerId,
+          companyId: user.companyId,
+        },
+      });
+
+      if (!customer) {
+        return NextResponse.json(
+          { error: "Cliente no encontrado o no pertenece a esta empresa" },
+          { status: 404 }
+        );
+      }
+    }
 
     const [quotations, totalCount] = await Promise.all([
       prisma.quotation.findMany({
@@ -66,22 +105,28 @@ export async function GET(request: NextRequest) {
         include: {
           customer: {
             select: {
+              id: true,
               name: true,
               email: true,
               phone: true,
+              rfc: true,
             },
           },
           user: {
             select: {
               name: true,
+              email: true,
             },
           },
           quotationItems: {
             include: {
               product: {
                 select: {
+                  id: true,
                   name: true,
                   sku: true,
+                  price: true,
+                  description: true,
                 },
               },
             },
@@ -121,15 +166,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: authResult.user.userId },
+    const { user } = authResult;
+
+    // Verificar que el usuario tiene empresa asignada
+    const userWithCompany = await prisma.user.findFirst({
+      where: {
+        id: user.userId,
+        companyId: user.companyId,
+      },
     });
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (!userWithCompany) {
+      return NextResponse.json(
+        { error: "Usuario no encontrado o no tiene empresa asignada" },
+        { status: 404 }
+      );
     }
 
     const body: CreateQuotationRequest = await request.json();
+
+    // Validaciones básicas
+    if (!body.customerId) {
+      return NextResponse.json(
+        { error: "El cliente es requerido" },
+        { status: 400 }
+      );
+    }
 
     if (!body.quotationItems || body.quotationItems.length === 0) {
       return NextResponse.json(
@@ -138,19 +200,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Verificar que el cliente pertenece a la misma empresa
+    const customer = await prisma.customer.findFirst({
+      where: {
+        id: body.customerId,
+        companyId: user.companyId,
+      },
+    });
+
+    if (!customer) {
+      return NextResponse.json(
+        { error: "Cliente no encontrado o no pertenece a esta empresa" },
+        { status: 404 }
+      );
+    }
+
+    // Verificar que los productos pertenecen a la misma empresa
+    for (const item of body.quotationItems) {
+      const product = await prisma.product.findFirst({
+        where: {
+          id: item.productId,
+          companyId: user.companyId,
+        },
+      });
+
+      if (!product) {
+        return NextResponse.json(
+          {
+            error: `Producto con ID ${item.productId} no encontrado o no pertenece a esta empresa`,
+          },
+          { status: 404 }
+        );
+      }
+    }
+
     // Calcular total
     const totalAmount = body.quotationItems.reduce((sum, item) => {
       return sum + item.quantity * item.unitPrice;
     }, 0);
 
-    // Crear cotización
+    // Crear cotización - usar valor por defecto para status
     const quotation = await prisma.quotation.create({
       data: {
+        companyId: user.companyId, // ← AÑADIR companyId
         customerId: body.customerId,
-        userId: user.id,
+        userId: user.userId,
         expiryDate: body.expiryDate ? new Date(body.expiryDate) : null,
         totalAmount,
         notes: body.notes,
+        // El status será el valor por defecto definido en el schema ("pending")
         quotationItems: {
           create: body.quotationItems.map((item) => ({
             productId: item.productId,
@@ -164,11 +262,32 @@ export async function POST(request: NextRequest) {
         },
       },
       include: {
-        customer: true,
-        user: true,
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
         quotationItems: {
           include: {
-            product: true,
+            product: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+                price: true,
+                description: true,
+              },
+            },
           },
         },
       },
@@ -177,6 +296,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ quotation }, { status: 201 });
   } catch (error: unknown) {
     console.error("Error creating quotation:", error);
+
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -8,6 +8,7 @@ interface JwtPayload {
   userId: string;
   email: string;
   name?: string;
+  companyId: string;
 }
 
 // GET /api/suppliers
@@ -25,9 +26,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
 
-    // ✅ Validar token sin variable inútil
+    let payload: JwtPayload;
     try {
-      jwt.verify(token, JWT_SECRET) as JwtPayload;
+      payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
     } catch {
       return NextResponse.json(
         { error: "Token inválido o expirado" },
@@ -43,6 +44,7 @@ export async function GET(req: NextRequest) {
     const sortOrder = searchParams.get("sortOrder") || "asc";
 
     const where: {
+      companyId: string;
       OR?: Array<{
         name?: { contains: string; mode: "insensitive" };
         contactName?: { contains: string; mode: "insensitive" };
@@ -50,7 +52,9 @@ export async function GET(req: NextRequest) {
         phone?: { contains: string; mode: "insensitive" };
         rfc?: { contains: string; mode: "insensitive" };
       }>;
-    } = {};
+    } = {
+      companyId: payload.companyId, // 🔒 CLAVE
+    };
 
     if (search) {
       where.OR = [
@@ -91,30 +95,14 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/suppliers
 export async function POST(req: NextRequest) {
   try {
-    if (!JWT_SECRET) {
-      return NextResponse.json(
-        { error: "JWT secret no definido" },
-        { status: 500 }
-      );
-    }
-
     const token = req.cookies.get("token")?.value;
     if (!token) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
 
-    // ✅ Validar token sin userId no usado
-    try {
-      jwt.verify(token, JWT_SECRET) as JwtPayload;
-    } catch {
-      return NextResponse.json(
-        { error: "Token inválido o expirado" },
-        { status: 401 }
-      );
-    }
+    const payload = jwt.verify(token, JWT_SECRET!) as JwtPayload;
 
     const body = await req.json();
 
@@ -138,6 +126,9 @@ export async function POST(req: NextRequest) {
         state: body.state,
         municipality: body.municipality,
         rfc: body.rfc,
+
+        // 🔒 CLAVE
+        companyId: payload.companyId,
       },
     });
 

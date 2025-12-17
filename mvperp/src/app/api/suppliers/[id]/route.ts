@@ -8,58 +8,40 @@ interface JwtPayload {
   userId: string;
   email: string;
   name?: string;
+  companyId: string;
 }
 
-// GET /api/suppliers/[id]
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!JWT_SECRET) {
-      return NextResponse.json(
-        { error: "JWT secret no definido" },
-        { status: 500 }
-      );
-    }
-
     const token = req.cookies.get("token")?.value;
     if (!token) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
 
-    // ✅ Validar token (sin userId no usado)
-    try {
-      jwt.verify(token, JWT_SECRET) as JwtPayload;
-    } catch {
-      return NextResponse.json(
-        { error: "Token inválido o expirado" },
-        { status: 401 }
-      );
-    }
-
+    const payload = jwt.verify(token, JWT_SECRET!) as JwtPayload;
     const { id } = await params;
 
-    const supplier = await prisma.supplier.findUnique({
-      where: { id },
+    const supplier = await prisma.supplier.findFirst({
+      where: {
+        id,
+        companyId: payload.companyId, // 🔒 CLAVE
+      },
       include: {
         purchases: {
+          orderBy: { date: "desc" },
+          take: 10,
           include: {
             purchaseItems: {
               include: {
                 product: {
-                  select: {
-                    name: true,
-                    sku: true,
-                  },
+                  select: { name: true, sku: true },
                 },
               },
             },
           },
-          orderBy: {
-            date: "desc",
-          },
-          take: 10,
         },
       },
     });
@@ -73,7 +55,7 @@ export async function GET(
 
     return NextResponse.json({ supplier });
   } catch (error) {
-    console.error("Error fetching supplier:", error);
+    console.error(error);
     return NextResponse.json(
       { error: "Error al obtener proveedor" },
       { status: 500 }
@@ -81,57 +63,25 @@ export async function GET(
   }
 }
 
-// PUT /api/suppliers/[id]
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!JWT_SECRET) {
-      return NextResponse.json(
-        { error: "JWT secret no definido" },
-        { status: 500 }
-      );
-    }
-
     const token = req.cookies.get("token")?.value;
     if (!token) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
 
-    // ✅ Validar token
-    try {
-      jwt.verify(token, JWT_SECRET) as JwtPayload;
-    } catch {
-      return NextResponse.json(
-        { error: "Token inválido o expirado" },
-        { status: 401 }
-      );
-    }
-
+    const payload = jwt.verify(token, JWT_SECRET!) as JwtPayload;
     const { id } = await params;
     const body = await req.json();
 
-    if (body.name && body.name.trim() === "") {
-      return NextResponse.json(
-        { error: "El nombre del proveedor es requerido" },
-        { status: 400 }
-      );
-    }
-
-    const existingSupplier = await prisma.supplier.findUnique({
-      where: { id },
-    });
-
-    if (!existingSupplier) {
-      return NextResponse.json(
-        { error: "Proveedor no encontrado" },
-        { status: 404 }
-      );
-    }
-
-    const supplier = await prisma.supplier.update({
-      where: { id },
+    const result = await prisma.supplier.updateMany({
+      where: {
+        id,
+        companyId: payload.companyId, // 🔒
+      },
       data: {
         name: body.name,
         contactName: body.contactName,
@@ -147,9 +97,16 @@ export async function PUT(
       },
     });
 
-    return NextResponse.json({ supplier });
+    if (result.count === 0) {
+      return NextResponse.json(
+        { error: "Proveedor no encontrado" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ message: "Proveedor actualizado" });
   } catch (error) {
-    console.error("Error updating supplier:", error);
+    console.error(error);
     return NextResponse.json(
       { error: "Error al actualizar proveedor" },
       { status: 500 }
@@ -157,53 +114,37 @@ export async function PUT(
   }
 }
 
-// DELETE /api/suppliers/[id]
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!JWT_SECRET) {
-      return NextResponse.json(
-        { error: "JWT secret no definido" },
-        { status: 500 }
-      );
-    }
-
     const token = req.cookies.get("token")?.value;
     if (!token) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
 
-    // ✅ Validar token
-    try {
-      jwt.verify(token, JWT_SECRET) as JwtPayload;
-    } catch {
-      return NextResponse.json(
-        { error: "Token inválido o expirado" },
-        { status: 401 }
-      );
-    }
-
+    const payload = jwt.verify(token, JWT_SECRET!) as JwtPayload;
     const { id } = await params;
 
-    const existingSupplier = await prisma.supplier.findUnique({
-      where: { id },
+    const supplier = await prisma.supplier.findFirst({
+      where: {
+        id,
+        companyId: payload.companyId, // 🔒
+      },
       include: {
-        purchases: {
-          take: 1,
-        },
+        purchases: { take: 1 },
       },
     });
 
-    if (!existingSupplier) {
+    if (!supplier) {
       return NextResponse.json(
         { error: "Proveedor no encontrado" },
         { status: 404 }
       );
     }
 
-    if (existingSupplier.purchases.length > 0) {
+    if (supplier.purchases.length > 0) {
       return NextResponse.json(
         {
           error:
@@ -221,7 +162,7 @@ export async function DELETE(
       message: "Proveedor eliminado correctamente",
     });
   } catch (error) {
-    console.error("Error deleting supplier:", error);
+    console.error(error);
     return NextResponse.json(
       { error: "Error al eliminar proveedor" },
       { status: 500 }

@@ -12,7 +12,8 @@ export default function Register() {
     email: "",
     password: "",
     confirmPassword: "",
-    company: "",
+    companyName: "", // ← CAMBIADO de "company" a "companyName"
+    companyRfc: "", // ← NUEVO CAMPO OBLIGATORIO
     phone: "",
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -20,10 +21,31 @@ export default function Register() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+
+    // Convertir RFC a mayúsculas automáticamente
+    if (name === "companyRfc") {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value.toUpperCase(),
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
+  };
+
+  const validateRfc = (rfc: string): boolean => {
+    // Validación básica de RFC (12 o 13 caracteres)
+    const cleanRfc = rfc.trim().toUpperCase();
+    if (cleanRfc.length !== 12 && cleanRfc.length !== 13) {
+      return false;
+    }
+
+    // Patrón RFC: 3-4 letras + 6 números + 3 caracteres alfanuméricos
+    const rfcPattern = /^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{2}[A-Z0-9]?$/;
+    return rfcPattern.test(cleanRfc);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,6 +67,19 @@ export default function Register() {
       return;
     }
 
+    // Validar RFC
+    if (!formData.companyRfc.trim()) {
+      toast.error("El RFC de la empresa es obligatorio");
+      return;
+    }
+
+    if (!validateRfc(formData.companyRfc)) {
+      toast.error(
+        "RFC inválido. Debe tener 12 o 13 caracteres (ejemplo: ABC123456XYZ)"
+      );
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -55,21 +90,19 @@ export default function Register() {
           email: formData.email,
           name: formData.name,
           password: formData.password,
-          company: formData.company,
-          phone: formData.phone,
+          companyName: formData.companyName || formData.name || "Mi empresa", // Usar nombre personal si no hay empresa
+          companyRfc: formData.companyRfc.trim().toUpperCase(),
         }),
       });
 
       const data = await res.json();
 
       if (res.ok) {
-        toast.success("¡Registro exitoso! Revisa tu correo para confirmar.");
-        setTimeout(() => {
-          router.push("/login");
-        }, 2000);
+        toast.success("¡Cuenta creada correctamente!");
+        router.push("/dashboard");
       } else {
         toast.error(data.error || "Error en el registro");
-        console.log(data.error);
+        console.error(data.error);
       }
     } catch (error) {
       console.error(error);
@@ -183,10 +216,10 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Empresa (Opcional) */}
+            {/* Empresa */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Empresa (Opcional)
+                Nombre de la Empresa *
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -206,13 +239,57 @@ export default function Register() {
                 </div>
                 <input
                   type="text"
-                  name="company"
-                  value={formData.company}
+                  name="companyName"
+                  value={formData.companyName}
                   onChange={handleChange}
                   className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl bg-gray-50/50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:ring-opacity-50 transition-all duration-200 outline-none"
                   placeholder="Nombre de tu empresa"
+                  required
                 />
               </div>
+            </div>
+
+            {/* RFC de la Empresa */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                RFC de la Empresa *
+                <span className="text-xs font-normal text-gray-500 ml-2">
+                  (12 o 13 caracteres)
+                </span>
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg
+                    className="h-5 w-5 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  name="companyRfc"
+                  value={formData.companyRfc}
+                  onChange={handleChange}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl bg-gray-50/50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:ring-opacity-50 transition-all duration-200 outline-none uppercase"
+                  placeholder="ABC123456XYZ"
+                  required
+                  pattern="[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{2}[A-Z0-9]?"
+                  title="Ejemplo: ABC123456XYZ (empresa) o ABCD123456XYZ (persona física)"
+                  maxLength={13}
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Ejemplos: ABC123456XYZ (empresa) o ABCD123456XYZ (persona
+                física)
+              </p>
             </div>
 
             {/* Teléfono (Opcional) */}
@@ -438,6 +515,10 @@ export default function Register() {
               <p className="text-sm text-gray-500">
                 Al registrarte, obtendrás acceso a una prueba gratuita de 14
                 días
+              </p>
+              <p className="text-xs text-gray-400 mt-2">
+                * El RFC es requerido para cumplir con las regulaciones fiscales
+                mexicanas
               </p>
             </div>
           </div>

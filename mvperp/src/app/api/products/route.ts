@@ -1,14 +1,11 @@
-// src/app/api/products/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { prisma } from "@/lib/prisma";
-import { writeFile } from "fs/promises";
-import { mkdir } from "fs/promises";
+import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// Interfaces (ya las tienes, pero las dejamos por claridad)
 interface VariantData {
   type: string;
   value: string;
@@ -48,68 +45,114 @@ interface ProductRequestBody {
   priceLists?: PriceListData[];
 }
 
+interface JwtPayload {
+  userId: string;
+  companyId: string;
+}
+
+/* =========================
+   GET /api/products
+========================= */
 export async function GET(req: NextRequest) {
-  if (!JWT_SECRET)
+  if (!JWT_SECRET) {
     return NextResponse.json(
       { error: "JWT secret no definido" },
       { status: 500 }
     );
+  }
 
   const token = req.cookies.get("token")?.value;
-  if (!token)
+  if (!token) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+  }
 
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as { userId: string };
+    const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
+
+    if (!payload.companyId) {
+      return NextResponse.json(
+        { error: "Usuario sin empresa asociada" },
+        { status: 403 }
+      );
+    }
+
     const products = await prisma.product.findMany({
-      where: { userId: payload.userId },
-      orderBy: { createdAt: "desc" },
+      where: {
+        companyId: payload.companyId,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
       include: {
         variants: true,
         priceLists: true,
       },
     });
+
     return NextResponse.json({ products });
   } catch {
     return NextResponse.json({ error: "Token inválido" }, { status: 401 });
   }
 }
 
+/* =========================
+   POST /api/products
+========================= */
 export async function POST(req: NextRequest) {
-  if (!JWT_SECRET)
+  if (!JWT_SECRET) {
     return NextResponse.json(
       { error: "JWT secret no definido" },
       { status: 500 }
     );
+  }
+
   const token = req.cookies.get("token")?.value;
-  if (!token)
+  if (!token) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+  }
 
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as { userId: string };
+    const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
+
+    if (!payload.companyId) {
+      return NextResponse.json(
+        { error: "Usuario sin empresa asociada" },
+        { status: 403 }
+      );
+    }
+
     const formData = await req.formData();
     const bodyRaw = formData.get("product") as string;
     const body: ProductRequestBody = JSON.parse(bodyRaw);
 
-    let imageUrl = body.image || undefined;
+    let imageUrl = body.image ?? undefined;
 
+    /* ===== Imagen ===== */
     const imageFile = formData.get("image") as File | null;
     if (imageFile && imageFile.size > 0) {
       const bytes = await imageFile.arrayBuffer();
       const buffer = Buffer.from(bytes);
-      const ext = (imageFile.name.split(".").pop() || "jpg").toLowerCase();
-      const filename = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
+      const ext = imageFile.name.split(".").pop()?.toLowerCase() || "jpg";
+
+      const filename = `${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2, 8)}.${ext}`;
+
       const uploadDir = path.join(process.cwd(), "public", "uploads");
       await mkdir(uploadDir, { recursive: true });
       await writeFile(path.join(uploadDir, filename), buffer);
+
       imageUrl = `/uploads/${filename}`;
     }
 
+    /* ===== Crear producto ===== */
     const product = await prisma.product.create({
       data: {
+        companyId: payload.companyId,
         userId: payload.userId,
+
         name: body.name,
-        type: body.type || "producto",
+        type: body.type ?? "producto",
         barcode: body.barcode,
         category: body.category,
         sku: body.sku,
@@ -120,10 +163,10 @@ export async function POST(req: NextRequest) {
         brand: body.brand,
         description: body.description,
         useStock: body.useStock ?? true,
-        quantity: body.quantity ?? 0,
-        price: body.price ?? 0,
-        cost: body.cost ?? 0,
-        stock: body.stock ?? body.quantity ?? 0,
+        quantity: body.quantity,
+        price: body.price,
+        cost: body.cost,
+        stock: body.stock ?? body.quantity,
         image: imageUrl,
         location: body.location,
         minimumQuantity: body.minimumQuantity,
@@ -135,36 +178,42 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    if (body.variants && body.variants.length > 0) {
+    /* ===== Variantes ===== */
+    if (body.variants?.length) {
       await prisma.variant.createMany({
-        data: body.variants.map((variant) => ({
+        data: body.variants.map((v) => ({
           productId: product.id,
-          type: variant.type,
-          value: variant.value,
+          type: v.type,
+          value: v.value,
         })),
       });
     }
 
-    if (body.priceLists && body.priceLists.length > 0) {
+    /* ===== Listas de precio ===== */
+    if (body.priceLists?.length) {
       await prisma.priceList.createMany({
-        data: body.priceLists.map((priceList) => ({
+        data: body.priceLists.map((p) => ({
           productId: product.id,
-          name: priceList.name,
-          price: priceList.price,
+          name: p.name,
+          price: p.price,
         })),
       });
     }
 
     const productWithRelations = await prisma.product.findUnique({
       where: { id: product.id },
-      include: { variants: true, priceLists: true },
+      include: {
+        variants: true,
+        priceLists: true,
+      },
     });
 
     return NextResponse.json({ product: productWithRelations });
-  } catch (err: unknown) {
-    console.error("Error en POST /api/products:", err);
-    let message = "Error al crear el producto";
-    if (err instanceof Error) message = err.message;
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch (err) {
+    console.error("POST /api/products error:", err);
+    return NextResponse.json(
+      { error: "Error al crear el producto" },
+      { status: 500 }
+    );
   }
 }
