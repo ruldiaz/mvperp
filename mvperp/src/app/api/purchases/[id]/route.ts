@@ -70,7 +70,12 @@ export async function GET(
             phone: true,
             email: true,
             rfc: true,
-            address: true,
+            street: true, // ← Campos de dirección reales
+            neighborhood: true,
+            postalCode: true,
+            city: true,
+            state: true,
+            municipality: true,
           },
         },
         purchaseItems: {

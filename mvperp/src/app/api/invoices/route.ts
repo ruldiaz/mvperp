@@ -140,7 +140,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// app/api/invoices/route.ts (parte corregida)
 export async function POST(request: NextRequest) {
   try {
     const authResult = await verifyAuth(request);
@@ -160,7 +159,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Validar que la compañía existe (ya lo hicimos antes, pero TypeScript no lo sabe)
+    // Validar que la compañía existe
     if (!user.company) {
       return NextResponse.json(
         { error: "Primero debe configurar los datos fiscales de la empresa" },
@@ -217,6 +216,7 @@ export async function POST(request: NextRequest) {
           data: {
             customerId: body.customerId,
             userId: user.id,
+            companyId: user.company!.id, // ← AÑADIDO companyId
             totalAmount: total,
             status: "completed",
             date: new Date(),
@@ -227,15 +227,14 @@ export async function POST(request: NextRequest) {
       }
 
       // Asegurar que saleIdForInvoice no sea undefined
-      // Si llegamos aquí, saleIdForInvoice debería tener un valor
       const finalSaleId = saleIdForInvoice!;
 
-      // Crear la factura - usar ! para user.company porque ya validamos que existe
+      // Crear la factura
       const invoice = await tx.invoice.create({
         data: {
-          saleId: finalSaleId, // Ahora es string, no string | undefined
+          saleId: finalSaleId,
           customerId: body.customerId,
-          companyId: user.company!.id, // Usamos ! porque ya validamos que existe
+          companyId: user.company!.id,
           paymentMethod: body.paymentMethod || "PUE",
           paymentForm: body.paymentForm || "01",
           currency: body.currency || "MXN",
@@ -276,11 +275,10 @@ export async function POST(request: NextRequest) {
           saleItemId = saleItem.id;
         } else {
           // Para facturas directas, crear un nuevo saleItem
-          // Aquí item.productId está garantizado que existe por la validación anterior
           const newSaleItem = await tx.saleItem.create({
             data: {
-              saleId: finalSaleId, // Usamos finalSaleId que ya es string
-              productId: item.productId!, // Usamos ! porque ya validamos que existe
+              saleId: finalSaleId,
+              productId: item.productId!,
               quantity: item.quantity,
               unitPrice: item.unitPrice,
               totalPrice: item.quantity * item.unitPrice,

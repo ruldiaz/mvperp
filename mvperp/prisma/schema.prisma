@@ -9,46 +9,40 @@ datasource db {
 }
 
 model User {
-  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email       String     
   password    String
   name        String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-
-  companyId   String?    @db.Uuid
-  company     Company?   @relation(fields: [companyId], references: [id])
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  companyId   String?     @db.Uuid
+  company     Company?    @relation(fields: [companyId], references: [id])
   @@unique([companyId, email])
 
-  products    Product[]   // relación 1:N con productos
-  movements   Movement[]  // relación 1:N con movimientos
-  purchases   Purchase[]  // relación 1:N con compras
-  sales       Sale[]      // relación 1:N con ventas ← AÑADIDO
+  products    Product[]   
+  movements   Movement[]  
+  purchases   Purchase[]  
+  sales       Sale[]      
   quotations  Quotation[]
 }
 
 model Product {
-  id                  String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-
-  companyId String   @db.Uuid
-  company   Company  @relation(fields: [companyId], references: [id])
-
-  userId              String       @db.Uuid
-  user                User         @relation(fields: [userId], references: [id])
-
+  id                  String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId           String          @db.Uuid  // ← AÑADIDO
+  userId              String          @db.Uuid
   name                String
-  type                String       // producto o servicio
+  type                String
   barcode             String?
   category            String?
   sku                 String?
-  @@unique([companyId, sku])
-  sellAtPOS           Boolean      @default(false)
-  includeInCatalog    Boolean      @default(false)
-  requirePrescription Boolean      @default(false)
+  @@unique([companyId, sku])  // ← AÑADIDO
+  sellAtPOS           Boolean         @default(false)
+  includeInCatalog    Boolean         @default(false)
+  requirePrescription Boolean         @default(false)
   saleUnit            String?
   brand               String?
   description         String?
-  useStock            Boolean      @default(true)
+  useStock            Boolean         @default(true)
   quantity            Float?
   price               Float?
   cost                Float?
@@ -59,205 +53,203 @@ model Product {
   satKey              String?
   iva                 Float?
   ieps                Float?
-  satUnitKey          String?      // Considera agregar también la unidad de medida
-  ivaIncluded         Boolean      @default(true) // Si el precio incluye IVA
-  createdAt           DateTime     @default(now())
-  updatedAt           DateTime     @updatedAt
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  ivaIncluded         Boolean         @default(true)
+  satUnitKey          String?
 
-  variants            Variant[]
-  priceLists          PriceList[]
+  // Relaciones
+  company             Company         @relation(fields: [companyId], references: [id])  // ← AÑADIDO
   movements           Movement[]
+  priceLists          PriceList[]
+  user                User            @relation(fields: [userId], references: [id])
   purchaseItems       PurchaseItem[]
-  saleItems           SaleItem[]   // ← AÑADIDO
   quotationItems      QuotationItem[]
+  saleItems           SaleItem[]
+  variants            Variant[]
 }
 
 model Variant {
-  id         String   @id @default(cuid())
-  productId  String   @db.Uuid
-  product    Product  @relation(fields: [productId], references: [id])
-  type       String   // tamaño, color, material, estilo
-  value      String   // ejemplo: "rojo", "XL"
+  id        String  @id @default(cuid())
+  productId String  @db.Uuid
+  type      String
+  value     String
+  product   Product @relation(fields: [productId], references: [id])
 }
 
 model PriceList {
-  id         String   @id @default(cuid())
-  productId  String   @db.Uuid
-  product    Product  @relation(fields: [productId], references: [id])
-  name       String   // ejemplo: "Mayoreo", "Retail"
-  price      Float
+  id        String  @id @default(cuid())
+  productId String  @db.Uuid
+  name      String
+  price     Float
+  product   Product @relation(fields: [productId], references: [id])
 }
 
 model Movement {
   id            String   @id @default(cuid())
   productId     String   @db.Uuid
-  product       Product  @relation(fields: [productId], references: [id])
   userId        String   @db.Uuid
-  user          User     @relation(fields: [userId], references: [id])
   date          DateTime @default(now())
-  type          String   // "entrada" o "salida"
+  type          String
   quantity      Float
   previousStock Float
   newStock      Float
   location      String?
   note          String?
+  product       Product  @relation(fields: [productId], references: [id])
+  user          User     @relation(fields: [userId], references: [id])
 }
 
 model Supplier {
-  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId         String   @db.Uuid
-  company           Company  @relation(fields: [companyId], references: [id])
-  name              String
-  contactName       String?
-  phone             String?
-  email             String?
-  street            String?
-  neighborhood      String?
-  postalCode        String?
-  city              String?
-  state             String?
-  municipality      String?
-  rfc               String?
-  totalPurchases    Float    @default(0)
-  lastPurchase      DateTime?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id             String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId      String     @db.Uuid  // ← AÑADIDO
+  name           String
+  contactName    String?
+  phone          String?
+  email          String?
+  street         String?
+  neighborhood   String?
+  postalCode     String?
+  city           String?
+  state          String?
+  municipality   String?
+  rfc            String?
+  totalPurchases Float      @default(0)
+  lastPurchase   DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
 
-  purchases         Purchase[]
+  // Relaciones
+  company        Company    @relation(fields: [companyId], references: [id])  // ← AÑADIDO
+  purchases      Purchase[]
 }
 
 model Purchase {
-  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId         String   @db.Uuid  // ← AÑADIDO para consultas directas
-  company           Company  @relation(fields: [companyId], references: [id])
-  supplierId        String   @db.Uuid
-  supplier          Supplier @relation(fields: [supplierId], references: [id])
-  userId            String   @db.Uuid
-  user              User     @relation(fields: [userId], references: [id])
-  date              DateTime @default(now())
-  totalAmount       Float
-  status            String   @default("pending") // pending, completed, cancelled
-  notes             String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId     String         @db.Uuid  // ← AÑADIDO
+  supplierId    String         @db.Uuid
+  userId        String         @db.Uuid
+  date          DateTime       @default(now())
+  totalAmount   Float
+  status        String         @default("pending")
+  notes         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
-  purchaseItems     PurchaseItem[]
+  // Relaciones
+  company       Company        @relation(fields: [companyId], references: [id])  // ← AÑADIDO
+  supplier      Supplier       @relation(fields: [supplierId], references: [id])
+  user          User           @relation(fields: [userId], references: [id])
+  purchaseItems PurchaseItem[]
 }
 
 model PurchaseItem {
-  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  purchaseId        String   @db.Uuid
-  purchase          Purchase @relation(fields: [purchaseId], references: [id])
-  productId         String   @db.Uuid
-  product           Product  @relation(fields: [productId], references: [id])
-  quantity          Float
-  unitPrice         Float
-  totalPrice        Float
-  createdAt         DateTime @default(now())
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  purchaseId String   @db.Uuid
+  productId  String   @db.Uuid
+  quantity   Float
+  unitPrice  Float
+  totalPrice Float
+  createdAt  DateTime @default(now())
+  product    Product  @relation(fields: [productId], references: [id])
+  purchase   Purchase @relation(fields: [purchaseId], references: [id])
 }
 
 model Customer {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id                   String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId            String      @db.Uuid  // ← AÑADIDO
+  name                 String
+  email                String?     
+  phone                String?
+  address              String?
+  rfc                  String?
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+  fiscalAddress        String?
+  fiscalCity           String?
+  fiscalCountry        String?     @default("México")
+  fiscalExteriorNumber String?
+  fiscalInteriorNumber String?
+  fiscalMunicipality   String?
+  fiscalNeighborhood   String?
+  fiscalPostalCode     String?
+  fiscalState          String?
+  fiscalStreet         String?
+  razonSocial          String?
+  taxRegime            String?
+  usoCFDI              String?
 
-  companyId   String   @db.Uuid
-  company     Company  @relation(fields: [companyId], references: [id])
-
-  name        String
-  razonSocial String?   // Nombre fiscal
-  email       String?  
-  @@unique([companyId, email])
-  phone       String?
-  address     String?
-  rfc         String?
-  usoCFDI     String?   // Obligatorio en CFDI 4.0
-  taxRegime       String?   // Régimen fiscal (obligatorio)
-  fiscalAddress   String?   // Domicilio fiscal completo
-  fiscalStreet          String?
-  fiscalExteriorNumber  String?
-  fiscalInteriorNumber  String?
-  fiscalNeighborhood    String?
-  fiscalPostalCode      String?
-  fiscalCity            String?
-  fiscalState           String?
-  fiscalMunicipality    String?
-  fiscalCountry         String?   @default("México")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  // Relaciones
+  company              Company?    @relation(fields: [companyId], references: [id])  // ← AÑADIDO
+  invoices             Invoice[]
+  quotations           Quotation[]
+  sales                Sale[]
   
-  sales       Sale[]   // relación 1:N con ventas
-  invoices    Invoice[]
-  quotations  Quotation[]
+  @@unique([companyId, email])  // ← AÑADIDO
 }
 
 model Sale {
   id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId   String     @db.Uuid  // ← AÑADIDO para consultas directas
-  company     Company    @relation(fields: [companyId], references: [id])
+  companyId   String     @db.Uuid  // ← AÑADIDO
   customerId  String     @db.Uuid
-  customer    Customer   @relation(fields: [customerId], references: [id])
   userId      String     @db.Uuid
-  user        User       @relation(fields: [userId], references: [id])
   date        DateTime   @default(now())
   totalAmount Float
-  status      String     @default("completed") // completed, cancelled, refunded
+  status      String     @default("completed")
   notes       String?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
+  // Relaciones
+  company     Company    @relation(fields: [companyId], references: [id])  // ← AÑADIDO
+  invoices    Invoice[]
+  customer    Customer   @relation(fields: [customerId], references: [id])
+  user        User       @relation(fields: [userId], references: [id])
   saleItems   SaleItem[]
-  invoices    Invoice[]   // 👈 Relación 1:N
 }
 
 model SaleItem {
-  id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  saleId     String        @db.Uuid
-  sale       Sale          @relation(fields: [saleId], references: [id])
-
-  productId  String        @db.Uuid
-  product    Product       @relation(fields: [productId], references: [id])
-
-  quantity   Float
-  unitPrice  Float
-  totalPrice Float
-  satProductKey   String?   // Clave producto/servicio SAT
-  satUnitKey      String?   // Clave unidad de medida SAT
-  description     String?   // Descripción para factura
-
-  invoiceItems InvoiceItem[]  // 👈 Relación inversa
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  saleId        String        @db.Uuid
+  productId     String        @db.Uuid
+  quantity      Float
+  unitPrice     Float
+  totalPrice    Float
+  description   String?
+  satProductKey String?
+  satUnitKey    String?
+  invoiceItems  InvoiceItem[]
+  product       Product       @relation(fields: [productId], references: [id])
+  sale          Sale          @relation(fields: [saleId], references: [id])
 }
 
-
 model Company {
-  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name           String   // Razón social
-  rfc            String   @unique
-  regime         String   // Régimen fiscal (SAT)
-  // Certificado Digital
-  csdCert        String?  // Certificado CSD (archivo .cer en base64 o ruta)
-  csdKey         String?  // Llave privada (.key)
-  csdPassword    String?  // Contraseña de la llave
-  // Domicilio Fiscal
-  street         String   // no String?
-  exteriorNumber String   // no String?
-  interiorNumber String?   // <--- agregar opcional
-  neighborhood   String   // no String?
-  postalCode     String   // no String?
-  city           String   // no String?
-  state          String   // no String?
-  municipality   String   // no String?
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name           String
+  rfc            String    @unique
+  regime         String
+  csdCert        String?
+  csdKey         String?
+  csdPassword    String?
+  street         String
+  exteriorNumber String
+  neighborhood   String
+  postalCode     String
+  city           String
+  state          String
+  municipality   String
   country        String?   @default("México")
-  // Contacto
-  email          String?   // Correo para notificaciones
-  phone          String?   // Teléfono
-  // Configuración PAC (nuevos campos)
-  pac            String?   // Nombre del PAC (SW, Facturama, etc.)
-  pacUser        String?   // Usuario del PAC
-  pacPass        String?   // Contraseña del PAC
-  testMode       Boolean   @default(true) // Modo pruebas/producción
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  email          String?
+  phone          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  pac            String?
+  pacPass        String?
+  pacUser        String?
+  testMode       Boolean   @default(true)
+  interiorNumber String?
 
+  // Relaciones inversas (añadir estas)
   users          User[]
   invoices       Invoice[]
   suppliers      Supplier[]
@@ -269,80 +261,77 @@ model Company {
 }
 
 model Invoice {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  saleId      String   @db.Uuid
-  sale        Sale     @relation(fields: [saleId], references: [id])
-  customerId  String   @db.Uuid
-  customer    Customer @relation(fields: [customerId], references: [id])
-  companyId   String   @db.Uuid
-  company     Company  @relation(fields: [companyId], references: [id])
+  id                  String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  saleId              String        @db.Uuid
+  customerId          String        @db.Uuid
+  companyId           String        @db.Uuid
+  uuid                String?
+  serie               String?
+  folio               String?
+  status              String        @default("pending")
+  xmlUrl              String?
+  pdfUrl              String?
+  cancelledAt         DateTime?
+  paymentMethod       String?
+  paymentForm         String?
+  currency            String?       @default("MXN")
+  exchangeRate        Float?
+  subtotal            Float?
+  discount            Float?
+  taxes               Float?
+  cfdiUse             String?
+  relatedInvoices     String?
+  cancellationStatus  String?
+  cancellationReceipt String?
+  paymentAccount      String?
+  verificationUrl     String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  facturamaId         String?
+  stampedAt           DateTime?
 
-  uuid        String?  // Folio fiscal SAT
-  facturamaId String?  // 👈 NUEVO: ID interno de Facturama para PDF
-  stampedAt   DateTime? // 👈 Fecha de timbrado - AGREGAR ESTE CAMPO
-  serie       String?
-  folio       String?
-  status      String   @default("pending") // pending, stamped, cancelled
-  xmlUrl      String?
-  pdfUrl      String?
-  cancelledAt DateTime?
-  paymentMethod   String?   // Forma de pago (PUE, PPD)
-  paymentForm     String?   // Método de pago (01, 04, etc.)
-  currency        String?   @default("MXN")
-  exchangeRate    Float?    // Tipo de cambio si no es MXN
-  subtotal        Float?    // Base gravable
-  discount        Float?    // Descuento
-  taxes           Float?    // Total de impuestos
-  cfdiUse         String?   // Uso del CFDI (G01, G02, etc.)
-  relatedInvoices String?   // UUIDs de CFDI relacionados (pagos, etc.)
-  cancellationStatus String? // Estado de cancelación
-  cancellationReceipt String? // Acuse de cancelación
-  paymentAccount  String?   // Cuenta de pago (últimos 4 dígitos)
-  verificationUrl String?   // URL para verificación en SAT
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  invoiceItems InvoiceItem[]  // 👈 detalle de productos facturados
+  // Relaciones
+  company             Company       @relation(fields: [companyId], references: [id])
+  customer            Customer      @relation(fields: [customerId], references: [id])
+  sale                Sale          @relation(fields: [saleId], references: [id])
+  invoiceItems        InvoiceItem[]
 }
 
 model InvoiceItem {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  invoiceId   String   @db.Uuid
-  invoice     Invoice  @relation(fields: [invoiceId], references: [id])
-  saleItemId  String   @db.Uuid   // Relación con la línea de venta original
-  saleItem    SaleItem @relation(fields: [saleItemId], references: [id])
-
-  quantity    Float     // cantidad facturada (puede ser parcial)
-  unitPrice   Float
-  totalPrice  Float
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoiceId  String   @db.Uuid
+  saleItemId String   @db.Uuid
+  quantity   Float
+  unitPrice  Float
+  totalPrice Float
+  invoice    Invoice  @relation(fields: [invoiceId], references: [id])
+  saleItem   SaleItem @relation(fields: [saleItemId], references: [id])
 }
 
 model Quotation {
-  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId   String     @db.Uuid  // ← AÑADIDO para consultas directas
-  company     Company    @relation(fields: [companyId], references: [id])
-  customerId  String     @db.Uuid
-  customer    Customer   @relation(fields: [customerId], references: [id])
-  userId      String     @db.Uuid
-  user        User       @relation(fields: [userId], references: [id])
-  date        DateTime   @default(now())
-  expiryDate  DateTime?  // Fecha de vencimiento de la cotización
-  totalAmount Float
-  status      String     @default("pending") // pending, accepted, rejected, expired, converted
-  notes       String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId      String          @db.Uuid  // ← AÑADIDO
+  customerId     String          @db.Uuid
+  userId         String          @db.Uuid
+  date           DateTime        @default(now())
+  expiryDate     DateTime?
+  totalAmount    Float
+  status         String          @default("pending")
+  notes          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
+  // Relaciones
+  company        Company         @relation(fields: [companyId], references: [id])  // ← AÑADIDO
+  customer       Customer        @relation(fields: [customerId], references: [id])
+  user           User            @relation(fields: [userId], references: [id])
   quotationItems QuotationItem[]
 }
 
 model QuotationItem {
   id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   quotationId   String    @db.Uuid
-  quotation     Quotation @relation(fields: [quotationId], references: [id])
   productId     String    @db.Uuid
-  product       Product   @relation(fields: [productId], references: [id])
   quantity      Float
   unitPrice     Float
   totalPrice    Float
@@ -350,4 +339,6 @@ model QuotationItem {
   satUnitKey    String?
   description   String?
   createdAt     DateTime  @default(now())
+  product       Product   @relation(fields: [productId], references: [id])
+  quotation     Quotation @relation(fields: [quotationId], references: [id])
 }
