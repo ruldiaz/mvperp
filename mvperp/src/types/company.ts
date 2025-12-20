@@ -59,6 +59,9 @@ export interface CompanyFormData {
   pacUser?: string;
   pacPass?: string;
   testMode: boolean;
+  csdCert?: string; // base64 del .cer
+  csdKey?: string; // base64 del .key
+  csdPassword?: string; // contraseña de la llave
 }
 
 export interface CompanyResponse {

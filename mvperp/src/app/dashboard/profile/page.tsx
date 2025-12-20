@@ -36,6 +36,9 @@ export default function CompanyProfile() {
     pacUser: "",
     pacPass: "",
     testMode: true,
+    csdCert: undefined,
+    csdKey: undefined,
+    csdPassword: undefined,
   });
 
   useEffect(() => {
@@ -52,7 +55,19 @@ export default function CompanyProfile() {
         const data = await response.json();
         if (data.company) {
           setCompany(data.company);
-          setFormData(data.company);
+          setFormData({
+            ...data.company,
+            interiorNumber: data.company.interiorNumber || "",
+            country: data.company.country || "México",
+            email: data.company.email || "",
+            phone: data.company.phone || "",
+            pac: data.company.pac || "",
+            pacUser: data.company.pacUser || "",
+            pacPass: data.company.pacPass || "",
+            csdCert: data.company.csdCert || undefined,
+            csdKey: data.company.csdKey || undefined,
+            csdPassword: data.company.csdPassword || undefined,
+          });
         }
       } else if (response.status === 404) {
         setCompany(null);
@@ -70,27 +85,45 @@ export default function CompanyProfile() {
     setMessage("");
 
     try {
-      const response = await fetch("/api/company", {
+      // 1. Separar datos fiscales y CSD
+      const { csdCert, csdKey, csdPassword, ...companyData } = formData;
+
+      // 2. Guardar datos fiscales (sin CSD)
+      const companyRes = await fetch("/api/company", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(companyData),
         credentials: "include",
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        setCompany(data.company);
-        setMessage("Datos guardados correctamente");
-        setIsEditing(false);
-      } else {
-        setMessage(data.error || "Error al guardar los datos");
+      if (!companyRes.ok) {
+        const errData = await companyRes.json();
+        throw new Error(errData.error || "Error al guardar datos fiscales");
       }
+
+      const companyResult = await companyRes.json();
+      setCompany(companyResult.company);
+
+      // 3. Si se subió CSD, validarlo por separado
+      if (csdCert && csdKey && csdPassword) {
+        const csdRes = await fetch("/api/company/certificates", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ csdCert, csdKey, csdPassword }),
+          credentials: "include",
+        });
+
+        if (!csdRes.ok) {
+          const csdData = await csdRes.json();
+          throw new Error(csdData.error || "El certificado no es válido");
+        }
+      }
+
+      setMessage("Datos guardados correctamente");
+      setIsEditing(false);
     } catch (error) {
       console.error("Error al guardar:", error);
-      setMessage("Error de conexión");
+      setMessage(error instanceof Error ? error.message : "Error de conexión");
     } finally {
       setSaving(false);
     }
@@ -122,6 +155,9 @@ export default function CompanyProfile() {
         pac: company.pac || "",
         pacUser: company.pacUser || "",
         pacPass: company.pacPass || "",
+        csdCert: company.csdCert || undefined,
+        csdKey: company.csdKey || undefined,
+        csdPassword: company.csdPassword || undefined,
       });
     }
     setIsEditing(false);
@@ -167,21 +203,59 @@ export default function CompanyProfile() {
 
       {/* Contenido Principal */}
       <div className="max-w-6xl mx-auto px-4 py-8">
-        {message && (
+        {/* Mensaje informativo cuando está validando */}
+        {saving && (
+          <div className="mb-8 p-6 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200">
+            <div className="flex items-center space-x-4">
+              <div className="text-2xl bg-white p-3 rounded-xl shadow-sm animate-pulse">
+                🔐
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-blue-800">
+                  Validando certificado...
+                </p>
+                <p className="text-sm text-blue-600 mt-1">
+                  Verificando RFC, vigencia y correspondencia entre certificado
+                  y llave privada
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Mensaje de resultado (éxito o error) */}
+        {message && !saving && (
           <div
             className={`mb-8 p-6 rounded-2xl border shadow-sm ${
-              message.includes("Error")
+              message.includes("Error") || message.includes("fallida")
                 ? "bg-gradient-to-r from-red-50 to-pink-50 border-red-200 text-red-800"
                 : "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 text-green-800"
             }`}
           >
             <div className="flex items-center space-x-4">
               <div className="text-2xl bg-white p-3 rounded-xl shadow-sm">
-                {message.includes("Error") ? "⚠️" : "✅"}
+                {message.includes("Error") || message.includes("fallida")
+                  ? "⚠️"
+                  : "✅"}
               </div>
               <div className="flex-1">
-                <p>{message}</p>
+                <p className="font-medium">{message}</p>
+                {message.includes("contraseña") && (
+                  <p className="text-sm mt-2 opacity-80">
+                    💡 Asegúrate de usar la contraseña correcta del CSD (la que
+                    utilizaste al generar los archivos)
+                  </p>
+                )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Mostrar estado del CSD en modo lectura */}
+        {!isEditing && company?.csdCert && (
+          <div className="mb-8 p-4 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200">
+            <div className="flex items-center gap-2 text-green-800 font-medium">
+              ✅ Certificado de Sello Digital cargado y validado
             </div>
           </div>
         )}
@@ -567,6 +641,98 @@ export default function CompanyProfile() {
               </div>
             </div>
           </div>
+
+          {/* 🔐 Certificado de Sello Digital (CSD) – Solo en edición */}
+          {isEditing && (
+            <div className="p-8 rounded-2xl bg-gradient-to-r from-red-50 to-pink-50 border border-gray-200 shadow-sm">
+              <div className="flex items-start space-x-6 mb-6">
+                <div className="text-4xl bg-white p-4 rounded-xl shadow-sm">
+                  🔐
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-2xl font-bold text-gray-800 mb-3">
+                    Certificado de Sello Digital (CSD)
+                  </h2>
+                  <p className="text-gray-600 mb-6">
+                    Sube tu certificado (.cer), llave privada (.key) y su
+                    contraseña
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Certificado (.cer)
+                  </label>
+                  <input
+                    type="file"
+                    accept=".cer"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          const binary = reader.result as string;
+                          const base64 = btoa(binary);
+                          setFormData((prev) => ({ ...prev, csdCert: base64 }));
+                        };
+                        reader.readAsBinaryString(file);
+                      }
+                    }}
+                    className="w-full p-3 rounded-xl border border-gray-300"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Llave privada (.key)
+                  </label>
+                  <input
+                    type="file"
+                    accept=".cer"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          // ✅ Tipado seguro: verificamos que el resultado sea string
+                          if (typeof reader.result === "string") {
+                            const base64 = btoa(reader.result);
+                            setFormData((prev) => ({
+                              ...prev,
+                              csdCert: base64,
+                            }));
+                          }
+                          // Si no es string, ignoramos (no debería pasar con readAsBinaryString)
+                        };
+                        reader.readAsBinaryString(file);
+                      }
+                    }}
+                    className="w-full p-3 rounded-xl border border-gray-300"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Contraseña del CSD
+                  </label>
+                  <input
+                    type="password"
+                    value={formData.csdPassword || ""}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        csdPassword: e.target.value,
+                      }))
+                    }
+                    className="w-full p-3 rounded-xl border border-gray-300"
+                    placeholder="Contraseña del certificado"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Botones de acción */}
           <div className="flex justify-end gap-4">
