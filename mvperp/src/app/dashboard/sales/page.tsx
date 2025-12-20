@@ -65,7 +65,9 @@ export default function Sales() {
   }, [searchTerm, fetchSales]);
 
   const handlePageChange = (newPage: number) => {
-    fetchSales(newPage, searchTerm);
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      fetchSales(newPage, searchTerm);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -100,14 +102,30 @@ export default function Sales() {
   };
 
   const formatDate = (dateString: string | Date) => {
-    return new Date(dateString).toLocaleDateString("es-MX");
+    const date = new Date(dateString);
+    return date.toLocaleDateString("es-MX", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  };
+
+  const formatTime = (dateString: string | Date) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString("es-MX", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   const getStatusBadge = (status: string) => {
-    const statusConfig: Record<
-      string,
-      { bg: string; text: string; label: string }
-    > = {
+    type StatusKey = "completed" | "cancelled" | "refunded" | "pending";
+    
+    const statusConfig: Record<StatusKey, {
+      bg: string;
+      text: string;
+      label: string;
+    }> = {
       completed: {
         bg: "bg-gradient-to-r from-green-100 to-emerald-100",
         text: "text-green-800",
@@ -130,7 +148,7 @@ export default function Sales() {
       },
     };
 
-    const config = statusConfig[status] || {
+    const config = statusConfig[status as StatusKey] || {
       bg: "bg-gray-100",
       text: "text-gray-800",
       label: status,
@@ -143,6 +161,21 @@ export default function Sales() {
         {config.label}
       </span>
     );
+  };
+
+  const getFilteredCount = (statusFilter?: string) => {
+    if (!statusFilter || statusFilter === "Todas") {
+      return pagination.totalCount;
+    }
+    
+    const filterMap: Record<string, string> = {
+      "Completadas": "completed",
+      "Pendientes": "pending",
+      "Canceladas": "cancelled",
+    };
+    
+    const statusKey = filterMap[statusFilter];
+    return sales.filter(sale => sale.status === statusKey).length;
   };
 
   if (loading && sales.length === 0) {
@@ -229,9 +262,16 @@ export default function Sales() {
         {["Todas", "Completadas", "Pendientes", "Canceladas"].map((filter) => (
           <button
             key={filter}
-            className="px-4 py-2 bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 text-gray-700 rounded-lg hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100 hover:border-blue-300 hover:text-blue-700 transition-all duration-200 text-sm font-medium"
+            onClick={() => {
+              // Aquí podrías implementar la lógica de filtrado por estado
+              // Por ahora solo muestra el conteo
+            }}
+            className="px-4 py-2 bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 text-gray-700 rounded-lg hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100 hover:border-blue-300 hover:text-blue-700 transition-all duration-200 text-sm font-medium flex items-center gap-2"
           >
             {filter}
+            <span className="bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded-full">
+              {getFilteredCount(filter)}
+            </span>
           </button>
         ))}
       </div>
@@ -311,7 +351,7 @@ export default function Sales() {
                       </div>
                       <div>
                         <div className="font-semibold text-gray-900 group-hover:text-blue-700">
-                          #{sale.id?.slice(0, 8).toUpperCase()}
+                          #{sale.id?.slice(0, 8).toUpperCase() || "N/A"}
                         </div>
                         <div className="text-xs text-gray-500">Venta ID</div>
                       </div>
@@ -322,10 +362,7 @@ export default function Sales() {
                       {formatDate(sale.date)}
                     </div>
                     <div className="text-sm text-gray-500">
-                      {new Date(sale.date).toLocaleTimeString("es-MX", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {formatTime(sale.date)}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -339,10 +376,10 @@ export default function Sales() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-gray-900">
-                        {sale.saleItems.length} producto(s)
+                        {sale.saleItems?.length || 0} producto(s)
                       </span>
                       <div className="flex -space-x-2">
-                        {sale.saleItems.slice(0, 3).map((item, index) => (
+                        {(sale.saleItems || []).slice(0, 3).map((item, index) => (
                           <div
                             key={item.id}
                             className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full border-2 border-white flex items-center justify-center text-white text-xs font-bold"
@@ -351,9 +388,9 @@ export default function Sales() {
                             {index + 1}
                           </div>
                         ))}
-                        {sale.saleItems.length > 3 && (
+                        {(sale.saleItems || []).length > 3 && (
                           <div className="w-8 h-8 bg-gray-300 rounded-full border-2 border-white flex items-center justify-center text-gray-700 text-xs font-bold">
-                            +{sale.saleItems.length - 3}
+                            +{(sale.saleItems || []).length - 3}
                           </div>
                         )}
                       </div>
@@ -362,7 +399,7 @@ export default function Sales() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <div className="text-green-600 font-bold text-lg">
-                        {formatCurrency(sale.totalAmount)}
+                        {formatCurrency(sale.totalAmount || 0)}
                       </div>
                       <svg
                         className="w-5 h-5 text-green-500"
@@ -380,7 +417,7 @@ export default function Sales() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {getStatusBadge(sale.status)}
+                    {getStatusBadge(sale.status || "pending")}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
@@ -410,6 +447,29 @@ export default function Sales() {
                         </svg>
                         Ver
                       </Link>
+
+                      {/* 🆕 BOTÓN FACTURAR */}
+                      <Link
+                        href={`/dashboard/invoices/create?saleId=${sale.id}`}
+                        className="bg-gradient-to-r from-green-50 to-emerald-100 text-green-700 px-4 py-2 rounded-lg hover:from-green-100 hover:to-emerald-200 hover:text-green-800 transition-all duration-200 font-medium text-sm flex items-center gap-2 group/action"
+                        title="Facturar venta"
+                      >
+                        <svg
+                          className="w-4 h-4 group-hover/action:scale-110 transition-transform duration-200"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                        Facturar
+                      </Link>
+
                       <button
                         onClick={() => handleDelete(sale.id!)}
                         className="bg-gradient-to-r from-red-50 to-pink-100 text-red-700 px-4 py-2 rounded-lg hover:from-red-100 hover:to-pink-200 hover:text-red-800 transition-all duration-200 font-medium text-sm flex items-center gap-2 group/action"
@@ -481,152 +541,168 @@ export default function Sales() {
             )}
           </div>
         )}
+
+        {/* Paginación */}
+        {pagination.totalPages > 1 && (
+          <div className="border-t border-gray-200">
+            <div className="px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-sm text-gray-600">
+                Mostrando{" "}
+                <span className="font-semibold">
+                  {Math.max((pagination.page - 1) * pagination.limit + 1, 1)}
+                </span>{" "}
+                a{" "}
+                <span className="font-semibold">
+                  {Math.min(pagination.page * pagination.limit, pagination.totalCount)}
+                </span>{" "}
+                de <span className="font-semibold">{pagination.totalCount}</span>{" "}
+                ventas
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handlePageChange(pagination.page - 1)}
+                  disabled={pagination.page === 1}
+                  className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M15 19l-7-7 7-7"
+                    />
+                  </svg>
+                  Anterior
+                </button>
+
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (pagination.totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (pagination.page <= 3) {
+                      pageNum = i + 1;
+                    } else if (pagination.page >= pagination.totalPages - 2) {
+                      pageNum = pagination.totalPages - 4 + i;
+                    } else {
+                      pageNum = pagination.page - 2 + i;
+                    }
+
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => handlePageChange(pageNum)}
+                        className={`w-10 h-10 rounded-lg font-medium transition-all duration-200 ${
+                          pagination.page === pageNum
+                            ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg"
+                            : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:border-blue-300 hover:text-blue-700"
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  onClick={() => handlePageChange(pagination.page + 1)}
+                  disabled={pagination.page === pagination.totalPages}
+                  className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  Siguiente
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="text-sm text-gray-600">
+                Página{" "}
+                <span className="font-semibold text-blue-600">{pagination.page}</span> de{" "}
+                <span className="font-semibold">{pagination.totalPages}</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Paginación */}
-      {pagination.totalPages > 1 && (
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-          <div className="text-sm text-gray-600">
-            Mostrando {(pagination.page - 1) * pagination.limit + 1} -{" "}
-            {Math.min(
-              pagination.page * pagination.limit,
-              pagination.totalCount
-            )}{" "}
-            de {pagination.totalCount} ventas
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => handlePageChange(pagination.page - 1)}
-              disabled={pagination.page === 1}
-              className="px-4 py-2 bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 text-gray-700 rounded-lg hover:from-blue-50 hover:to-blue-100 hover:border-blue-300 hover:text-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-              Anterior
-            </button>
-
-            <div className="flex items-center gap-1">
-              {Array.from(
-                { length: Math.min(5, pagination.totalPages) },
-                (_, i) => {
-                  let pageNum;
-                  if (pagination.totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (pagination.page <= 3) {
-                    pageNum = i + 1;
-                  } else if (pagination.page >= pagination.totalPages - 2) {
-                    pageNum = pagination.totalPages - 4 + i;
-                  } else {
-                    pageNum = pagination.page - 2 + i;
-                  }
-
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => handlePageChange(pageNum)}
-                      className={`w-10 h-10 rounded-lg font-medium transition-all duration-200 ${
-                        pagination.page === pageNum
-                          ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md"
-                          : "bg-white border border-gray-200 text-gray-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                }
-              )}
-            </div>
-
-            <button
-              onClick={() => handlePageChange(pagination.page + 1)}
-              disabled={pagination.page === pagination.totalPages}
-              className="px-4 py-2 bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 text-gray-700 rounded-lg hover:from-blue-50 hover:to-blue-100 hover:border-blue-300 hover:text-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2"
-            >
-              Siguiente
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Estadísticas rápidas */}
+      {/* Resumen de ventas */}
       {sales.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-6">
-            <div className="flex justify-between items-center">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-100 rounded-xl p-4">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 font-medium">
-                  Ventas Totales
-                </p>
-                <p className="text-2xl font-bold text-gray-800 mt-2">
-                  {pagination.totalCount}
-                </p>
+                <p className="text-sm text-gray-600">Ventas totales</p>
+                <p className="text-2xl font-bold text-gray-800">{sales.length}</p>
               </div>
-              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center">
-                <span className="text-white text-xl">💰</span>
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100 rounded-xl p-6">
-            <div className="flex justify-between items-center">
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 rounded-xl p-4">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 font-medium">
-                  Ingresos del Mes
-                </p>
-                <p className="text-2xl font-bold text-gray-800 mt-2">
-                  {formatCurrency(
-                    sales.reduce((sum, sale) => sum + sale.totalAmount, 0)
-                  )}
+                <p className="text-sm text-gray-600">Total facturado</p>
+                <p className="text-2xl font-bold text-gray-800">
+                  {formatCurrency(sales.reduce((sum, sale) => sum + (sale.totalAmount || 0), 0))}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
-                <span className="text-white text-xl">💹</span>
+              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-100 rounded-xl p-6">
-            <div className="flex justify-between items-center">
+          <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-100 rounded-xl p-4">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 font-medium">
-                  Promedio por Venta
-                </p>
-                <p className="text-2xl font-bold text-gray-800 mt-2">
-                  {formatCurrency(
-                    sales.length > 0
-                      ? sales.reduce((sum, sale) => sum + sale.totalAmount, 0) /
-                          sales.length
-                      : 0
-                  )}
+                <p className="text-sm text-gray-600">Promedio por venta</p>
+                <p className="text-2xl font-bold text-gray-800">
+                  {formatCurrency(sales.length > 0 ? sales.reduce((sum, sale) => sum + (sale.totalAmount || 0), 0) / sales.length : 0)}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-                <span className="text-white text-xl">📊</span>
+              <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Última venta</p>
+                <p className="text-2xl font-bold text-gray-800">
+                  {sales.length > 0 ? formatDate(sales[sales.length - 1].date) : "N/A"}
+                </p>
+              </div>
+              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               </div>
             </div>
           </div>

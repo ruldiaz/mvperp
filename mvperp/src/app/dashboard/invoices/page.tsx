@@ -1,7 +1,7 @@
 // app/dashboard/invoices/page.tsx
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { Invoice } from "@/types/invoice";
 
@@ -23,6 +23,8 @@ export default function Invoices() {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const fetchInvoices = useCallback(
     async (page = 1, search = "") => {
@@ -43,8 +45,9 @@ export default function Invoices() {
         const data = await res.json();
         setInvoices(data.invoices);
         setPagination(data.pagination);
+        setError("");
       } catch (err) {
-        console.error(err);
+        console.error("Error fetching invoices:", err);
         setError("No se pudieron cargar las facturas");
       } finally {
         setLoading(false);
@@ -61,27 +64,65 @@ export default function Invoices() {
     return () => clearTimeout(timeoutId);
   }, [searchTerm, fetchInvoices]);
 
+  // Cerrar dropdown al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const handlePageChange = (newPage: number) => {
-    fetchInvoices(newPage, searchTerm);
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      fetchInvoices(newPage, searchTerm);
+    }
   };
 
-  const formatCurrency = (amount: number) => {
+  const handleDropdownToggle = () => {
+    setIsDropdownOpen(!isDropdownOpen);
+  };
+
+  const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat("es-MX", {
       style: "currency",
       currency: "MXN",
     }).format(amount);
   };
 
-  const formatDate = (dateString: string | Date) => {
-    return new Date(dateString).toLocaleDateString("es-MX", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+  const formatDate = (dateString: string | Date): string => {
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return "Fecha inválida";
+      }
+      return date.toLocaleDateString("es-MX", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+    } catch {
+      return "Fecha inválida";
+    }
   };
 
   const getStatusBadge = (status: string) => {
-    const statusConfig = {
+    type StatusKey = "pending" | "stamped" | "cancelled";
+
+    const statusConfig: Record<
+      StatusKey,
+      {
+        color: string;
+        text: string;
+        icon: string;
+      }
+    > = {
       pending: {
         color: "from-yellow-100 to-amber-100 text-yellow-800",
         text: "Pendiente",
@@ -99,8 +140,7 @@ export default function Invoices() {
       },
     };
 
-    const config =
-      statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
+    const config = statusConfig[status as StatusKey] || statusConfig.pending;
 
     return (
       <span
@@ -112,7 +152,7 @@ export default function Invoices() {
     );
   };
 
-  const calculateTotalAmount = (invoice: Invoice) => {
+  const calculateTotalAmount = (invoice: Invoice): number => {
     return (invoice.subtotal || 0) + (invoice.taxes || 0);
   };
 
@@ -152,7 +192,7 @@ export default function Invoices() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
-      {/* Hero Section */}
+      {/* Hero Section con Dropdown */}
       <div className="pt-8 pb-8 px-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-b-2xl shadow-lg">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center">
@@ -164,17 +204,116 @@ export default function Invoices() {
                 Gestiona y genera facturas para tus clientes
               </p>
             </div>
-            <Link
-              href="/dashboard/invoices/create"
-              className="mt-4 md:mt-0 bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-            >
-              + Nueva Factura
-            </Link>
+
+            {/* Dropdown para Nuevas Facturas */}
+            <div className="mt-4 md:mt-0 relative" ref={dropdownRef}>
+              <button
+                onClick={handleDropdownToggle}
+                className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center gap-2"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                  />
+                </svg>
+                Nueva Factura
+                <svg
+                  className={`w-4 h-4 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
+
+              {/* Dropdown Menu */}
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 z-50">
+                  <div className="py-2">
+                    <Link
+                      href="/dashboard/invoices/create"
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 transition-colors duration-150 group/item"
+                    >
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center group-hover/item:bg-blue-200 transition-colors">
+                        <svg
+                          className="w-5 h-5 text-blue-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-gray-800 group-hover/item:text-blue-700">
+                          Factura Directa
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Crear factura desde cero
+                        </div>
+                      </div>
+                    </Link>
+
+                    <div className="border-t border-gray-100 my-1"></div>
+
+                    <Link
+                      href="/dashboard/sales"
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-green-50 transition-colors duration-150 group/item"
+                    >
+                      <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center group-hover/item:bg-green-200 transition-colors">
+                        <svg
+                          className="w-5 h-5 text-green-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                          />
+                        </svg>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-gray-800 group-hover/item:text-green-700">
+                          Facturar Venta
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Desde una venta existente
+                        </div>
+                      </div>
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Contenido Principal */}
+      {/* Resto del contenido (sin cambios) */}
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Barra de búsqueda y estadísticas */}
         <div className="mb-8 grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -334,12 +473,95 @@ export default function Invoices() {
                     ? "Intenta con otros términos de búsqueda"
                     : "Comienza generando tu primera factura"}
                 </p>
-                <Link
-                  href="/dashboard/invoices/create"
-                  className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-8 py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-indigo-600 transition-all duration-200 shadow-lg hover:shadow-xl"
-                >
-                  + Generar Primera Factura
-                </Link>
+                <div className="relative inline-block" ref={dropdownRef}>
+                  <button
+                    onClick={handleDropdownToggle}
+                    className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-8 py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-indigo-600 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2"
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                      />
+                    </svg>
+                    Generar Factura
+                  </button>
+
+                  {isDropdownOpen && (
+                    <div className="absolute left-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 z-50">
+                      <div className="py-2">
+                        <Link
+                          href="/dashboard/invoices/create"
+                          onClick={() => setIsDropdownOpen(false)}
+                          className="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 transition-colors duration-150 group/item"
+                        >
+                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center group-hover/item:bg-blue-200 transition-colors">
+                            <svg
+                              className="w-5 h-5 text-blue-600"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                              />
+                            </svg>
+                          </div>
+                          <div>
+                            <div className="font-semibold text-gray-800 group-hover/item:text-blue-700">
+                              Factura Directa
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              Crear factura desde cero
+                            </div>
+                          </div>
+                        </Link>
+
+                        <div className="border-t border-gray-100 my-1"></div>
+
+                        <Link
+                          href="/dashboard/sales"
+                          onClick={() => setIsDropdownOpen(false)}
+                          className="flex items-center gap-3 px-4 py-3 hover:bg-green-50 transition-colors duration-150 group/item"
+                        >
+                          <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center group-hover/item:bg-green-200 transition-colors">
+                            <svg
+                              className="w-5 h-5 text-green-600"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                              />
+                            </svg>
+                          </div>
+                          <div>
+                            <div className="font-semibold text-gray-800 group-hover/item:text-green-700">
+                              Facturar Venta
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              Desde una venta existente
+                            </div>
+                          </div>
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
