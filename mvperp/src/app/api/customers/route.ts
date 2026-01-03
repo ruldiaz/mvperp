@@ -36,6 +36,29 @@ async function verifyAuth(request: NextRequest) {
    GET /customers
 ========================= */
 export async function GET(request: NextRequest) {
+  // Strangler feature flag
+  const USE_V2 = process.env.USE_CUSTOMERS_V2 === "true";
+  if (USE_V2) {
+    try {
+      // Proxy la request a v2 manteniendo query params
+      const v2Url = new URL("/api/customers/v2", request.url);
+      v2Url.search = new URL(request.url).search;
+
+      const v2Response = await fetch(v2Url.toString(), {
+        method: "GET",
+        headers: Object.fromEntries(request.headers.entries()),
+      });
+
+      // Retornar misma respuesta que v2
+      return new NextResponse(v2Response.body, {
+        status: v2Response.status,
+        headers: v2Response.headers,
+      });
+    } catch (error) {
+      console.error("Error proxying to v2:", error);
+      // Si falla v2, cae back al legacy
+    }
+  }
   const auth = await verifyAuth(request);
   if ("error" in auth) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
@@ -95,6 +118,29 @@ export async function GET(request: NextRequest) {
    POST /customers
 ========================= */
 export async function POST(request: NextRequest) {
+  // Strangler feature flag
+  const USE_V2 = process.env.USE_CUSTOMERS_V2 === "true";
+
+  if (USE_V2) {
+    try {
+      // Proxy la request a v2
+      const v2Url = new URL("/api/customers/v2", request.url);
+
+      const v2Response = await fetch(v2Url.toString(), {
+        method: "POST",
+        headers: Object.fromEntries(request.headers.entries()),
+        body: await request.text(),
+      });
+
+      return new NextResponse(v2Response.body, {
+        status: v2Response.status,
+        headers: v2Response.headers,
+      });
+    } catch (error) {
+      console.error("Error proxying POST to v2:", error);
+      // Si falla, cae back al legacy
+    }
+  }
   const auth = await verifyAuth(request);
   if ("error" in auth) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });

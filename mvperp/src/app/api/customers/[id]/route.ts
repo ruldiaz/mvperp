@@ -38,6 +38,28 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Strangler feature flag - AGREGAR ESTO
+  const USE_V2 = process.env.USE_CUSTOMERS_V2 === "true";
+  if (USE_V2) {
+    try {
+      // Proxy la request a v2
+      const { id } = await params;
+      const v2Url = new URL(`/api/customers/v2/${id}`, request.url);
+
+      const v2Response = await fetch(v2Url.toString(), {
+        method: "GET",
+        headers: Object.fromEntries(request.headers.entries()),
+      });
+
+      return new NextResponse(v2Response.body, {
+        status: v2Response.status,
+        headers: v2Response.headers,
+      });
+    } catch (error) {
+      console.error("Error proxying GET to v2:", error);
+      // Si falla, cae back al legacy
+    }
+  }
   const auth = await verifyAuth(request);
   if ("error" in auth) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
@@ -91,6 +113,29 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Strangler feature flag
+  const USE_V2 = process.env.USE_CUSTOMERS_V2 === "true";
+  if (USE_V2) {
+    try {
+      // Proxy la request a v2
+      const { id } = await params;
+      const v2Url = new URL(`/api/customers/v2/${id}`, request.url);
+
+      const v2Response = await fetch(v2Url.toString(), {
+        method: "PUT",
+        headers: Object.fromEntries(request.headers.entries()),
+        body: await request.text(),
+      });
+
+      return new NextResponse(v2Response.body, {
+        status: v2Response.status,
+        headers: v2Response.headers,
+      });
+    } catch (error) {
+      console.error("Error proxying PUT to v2:", error);
+      // Si falla, cae back al legacy
+    }
+  }
   const auth = await verifyAuth(request);
   if ("error" in auth) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
@@ -132,6 +177,28 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Strangler feature flag
+  const USE_V2 = process.env.USE_CUSTOMERS_V2 === "true";
+  if (USE_V2) {
+    try {
+      // Proxy la request a v2
+      const { id } = await params;
+      const v2Url = new URL(`/api/customers/v2/${id}`, request.url);
+
+      const v2Response = await fetch(v2Url.toString(), {
+        method: "DELETE",
+        headers: Object.fromEntries(request.headers.entries()),
+      });
+
+      return new NextResponse(v2Response.body, {
+        status: v2Response.status,
+        headers: v2Response.headers,
+      });
+    } catch (error) {
+      console.error("Error proxying DELETE to v2:", error);
+      // Si falla, cae back al legacy
+    }
+  }
   const auth = await verifyAuth(request);
   if ("error" in auth) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
