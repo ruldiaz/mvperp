@@ -1,4 +1,4 @@
-// src app dashboard sales [id]  page.tsx
+// src/app/dashboard/sales/[id]/page.tsx
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
@@ -15,10 +15,39 @@ import {
   pdf,
 } from "@react-pdf/renderer";
 
+// Definir tipos para la información de la empresa
+interface CompanyInfo {
+  id: string;
+  name: string;
+  rfc: string;
+  regime: string;
+  csdCert?: string | null;
+  csdKey?: string | null;
+  csdPassword?: string | null;
+  street: string;
+  exteriorNumber: string;
+  interiorNumber?: string | null;
+  neighborhood: string;
+  postalCode: string;
+  city: string;
+  state: string;
+  municipality: string;
+  country: string;
+  email?: string | null;
+  phone?: string | null;
+  pac?: string | null;
+  pacUser?: string | null;
+  pacPass?: string | null;
+  testMode: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export default function SaleDetailPage() {
   const params = useParams();
   const router = useRouter();
   const [sale, setSale] = useState<Sale | null>(null);
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [generatingPdf, setGeneratingPdf] = useState(false);
@@ -26,24 +55,50 @@ export default function SaleDetailPage() {
 
   const saleId = params.id as string;
 
+  // Función para obtener la información de la empresa
+  const fetchCompanyInfo = useCallback(async () => {
+    try {
+      const res = await fetch("/api/company", {
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        console.warn("No se pudo obtener información de la empresa");
+        return null;
+      }
+
+      const data = await res.json();
+      return data.company;
+    } catch (err) {
+      console.error("Error fetching company info:", err);
+      return null;
+    }
+  }, []);
+
   const fetchSale = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
 
-      const res = await fetch(`/api/sales/${saleId}`, {
-        credentials: "include",
-      });
+      // Obtener la información de la empresa y la venta en paralelo
+      const [companyRes, saleRes] = await Promise.all([
+        fetchCompanyInfo(),
+        fetch(`/api/sales/${saleId}`, {
+          credentials: "include",
+        }),
+      ]);
 
-      if (!res.ok) {
-        if (res.status === 404) {
+      setCompanyInfo(companyRes);
+
+      if (!saleRes.ok) {
+        if (saleRes.status === 404) {
           throw new Error("Venta no encontrada");
         }
         throw new Error("Error al cargar la venta");
       }
 
-      const data = await res.json();
-      setSale(data.sale);
+      const saleData = await saleRes.json();
+      setSale(saleData.sale);
     } catch (err) {
       console.error("Error fetching sale:", err);
       setError(err instanceof Error ? err.message : "Error desconocido");
@@ -53,7 +108,7 @@ export default function SaleDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [saleId]);
+  }, [saleId, fetchCompanyInfo]);
 
   useEffect(() => {
     if (saleId) {
@@ -91,8 +146,23 @@ export default function SaleDetailPage() {
     }
   };
 
+  // Función para construir la dirección completa
+  const getFullAddress = (company: CompanyInfo | null) => {
+    if (!company) return "";
+
+    const addressParts = [
+      `${company.street} ${company.exteriorNumber}`,
+      company.interiorNumber ? `Int. ${company.interiorNumber}` : null,
+      company.neighborhood,
+      `${company.postalCode} ${company.city}, ${company.state}`,
+      company.country,
+    ].filter(Boolean);
+
+    return addressParts.join(", ");
+  };
+
   const handlePrint = () => {
-    if (!ticketRef.current) return;
+    if (!ticketRef.current || !companyInfo) return;
 
     const printContent = ticketRef.current.innerHTML;
     const printWindow = window.open("", "_blank", "width=80mm,height=600");
@@ -212,6 +282,11 @@ export default function SaleDetailPage() {
       fontSize: 10,
       marginBottom: 2,
     },
+    companyAddress: {
+      fontSize: 9,
+      marginBottom: 2,
+      textAlign: "center",
+    },
     title: {
       fontSize: 18,
       fontWeight: "bold",
@@ -305,8 +380,14 @@ export default function SaleDetailPage() {
     },
   });
 
-  // Componente PDF dentro del mismo archivo
-  const SalePDFDocument = () => {
+  // Componente PDF dentro del mismo archivo - MODIFICADO para recibir companyInfo
+  const SalePDFDocument = ({
+    sale,
+    companyInfo,
+  }: {
+    sale: Sale;
+    companyInfo: CompanyInfo | null;
+  }) => {
     const formatCurrency = (amount: number) => {
       return new Intl.NumberFormat("es-MX", {
         style: "currency",
@@ -324,8 +405,6 @@ export default function SaleDetailPage() {
       });
     };
 
-    if (!sale) return null;
-
     const subtotal = sale.totalAmount;
     const iva = sale.totalAmount * 0.16;
     const total = sale.totalAmount * 1.16;
@@ -335,10 +414,21 @@ export default function SaleDetailPage() {
         <Page size="A4" style={styles.page}>
           {/* Encabezado */}
           <View style={styles.header}>
-            <Text style={styles.companyName}>MI EMPRESA</Text>
-            <Text style={styles.companyInfo}>RFC: XXXX010101XXX</Text>
-            <Text style={styles.companyInfo}>Tel: (123) 456-7890</Text>
-            <Text style={styles.companyInfo}>www.miempresa.com</Text>
+            <Text style={styles.companyName}>
+              {companyInfo?.name || "MI EMPRESA"}
+            </Text>
+            <Text style={styles.companyInfo}>
+              RFC: {companyInfo?.rfc || "XXXX010101XXX"}
+            </Text>
+            {companyInfo?.phone && (
+              <Text style={styles.companyInfo}>Tel: {companyInfo.phone}</Text>
+            )}
+            {companyInfo?.email && (
+              <Text style={styles.companyInfo}>Email: {companyInfo.email}</Text>
+            )}
+            <Text style={styles.companyAddress}>
+              {getFullAddress(companyInfo)}
+            </Text>
           </View>
 
           {/* Título */}
@@ -541,7 +631,9 @@ export default function SaleDetailPage() {
     setGeneratingPdf(true);
     try {
       // Crear el blob del PDF usando @react-pdf/renderer
-      const blob = await pdf(<SalePDFDocument />).toBlob();
+      const blob = await pdf(
+        <SalePDFDocument sale={sale} companyInfo={companyInfo} />
+      ).toBlob();
 
       // Crear URL para descargar
       const url = URL.createObjectURL(blob);
@@ -887,14 +979,22 @@ export default function SaleDetailPage() {
         </div>
       </div>
 
-      {/* Contenedor oculto para la impresión del ticket */}
+      {/* Contenedor oculto para la impresión del ticket - MODIFICADO para usar companyInfo */}
       <div ref={ticketRef} className="hidden">
         <div className="ticket-container">
           <div className="header">
-            <div className="company-name">MI EMPRESA</div>
-            <div className="company-info">RFC: XXXX010101XXX</div>
-            <div className="company-info">Tel: (123) 456-7890</div>
-            <div className="company-info">www.miempresa.com</div>
+            <div className="company-name">
+              {companyInfo?.name || "MI EMPRESA"}
+            </div>
+            <div className="company-info">
+              RFC: {companyInfo?.rfc || "XXXX010101XXX"}
+            </div>
+            {companyInfo?.phone && (
+              <div className="company-info">Tel: {companyInfo.phone}</div>
+            )}
+            {companyInfo?.email && (
+              <div className="company-info">Email: {companyInfo.email}</div>
+            )}
           </div>
 
           <div className="section text-center">

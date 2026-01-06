@@ -1,3 +1,4 @@
+// src/app/dashboard/sales/quotation/page.tsx
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -5,6 +6,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Quotation } from "@/types/sale";
 import { toast } from "react-hot-toast";
+
+const IVA_PERCENTAGE = 0.16;
 
 interface PaginationInfo {
   page: number;
@@ -149,6 +152,11 @@ export default function Quotations() {
       style: "currency",
       currency: "MXN",
     }).format(amount);
+  };
+
+  // Agrega estas funciones para calcular con IVA
+  const calculateTotalWithIVA = (amount: number) => {
+    return amount * (1 + IVA_PERCENTAGE);
   };
 
   const formatDate = (dateString: string | Date) => {
@@ -387,7 +395,12 @@ export default function Quotations() {
                   </td>
                   <td className="px-6 py-5">
                     <div className="font-bold text-green-600">
-                      {formatCurrency(quotation.totalAmount)}
+                      {formatCurrency(
+                        calculateTotalWithIVA(quotation.totalAmount)
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Sin IVA: {formatCurrency(quotation.totalAmount)}
                     </div>
                   </td>
                   <td className="px-6 py-5">

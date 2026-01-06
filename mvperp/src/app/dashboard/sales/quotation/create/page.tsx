@@ -1,3 +1,4 @@
+// src/app/dashboard/sales/quotation/create/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -5,6 +6,9 @@ import { useRouter } from "next/navigation";
 import { Product, QuotationItem } from "@/types/product";
 import { Customer } from "@/types/customer";
 import { toast } from "react-hot-toast";
+
+// Agrega la constante de IVA al inicio del componente
+const IVA_PERCENTAGE = 0.16;
 
 export default function CreateQuotation() {
   const router = useRouter();
@@ -17,6 +21,14 @@ export default function CreateQuotation() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+
+  // Modifica la función que calcula el total para incluir IVA
+  const totalAmountWithoutIVA = items.reduce(
+    (sum, item) => sum + item.totalPrice,
+    0
+  );
+  const ivaAmount = totalAmountWithoutIVA * IVA_PERCENTAGE;
+  const totalAmountWithIVA = totalAmountWithoutIVA * (1 + IVA_PERCENTAGE);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -163,8 +175,6 @@ export default function CreateQuotation() {
     }
   };
 
-  const totalAmount = items.reduce((sum, item) => sum + item.totalPrice, 0);
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("es-MX", {
       style: "currency",
@@ -239,7 +249,7 @@ export default function CreateQuotation() {
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Selección de cliente */}
           <div>
-            <label className="block text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <label className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
               <svg
                 className="w-6 h-6 text-green-600"
                 fill="none"
@@ -272,7 +282,7 @@ export default function CreateQuotation() {
 
           {/* Fecha de vencimiento */}
           <div>
-            <label className="block text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <label className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
               <svg
                 className="w-6 h-6 text-amber-600"
                 fill="none"
@@ -393,7 +403,7 @@ export default function CreateQuotation() {
                   <input
                     type="number"
                     min="0"
-                    step="0.01"
+                    step="0.000001"
                     value={item.unitPrice}
                     onChange={(e) =>
                       updateItem(index, "unitPrice", Number(e.target.value))
@@ -490,7 +500,7 @@ export default function CreateQuotation() {
 
           {/* Notas */}
           <div>
-            <label className="block text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <label className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
               <svg
                 className="w-6 h-6 text-purple-600"
                 fill="none"
@@ -518,17 +528,34 @@ export default function CreateQuotation() {
           {/* Total y botones */}
           <div className="pt-6 border-t border-gray-200">
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 mb-6">
-              <div className="flex flex-col sm:flex-row sm:justify-between items-center gap-4">
-                <div>
-                  <p className="text-lg text-gray-700">
-                    Total de la Cotización
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    IVA no incluido (se agregará al generar PDF)
-                  </p>
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:justify-between items-center gap-4">
+                  <div>
+                    <p className="text-lg text-gray-700">Subtotal (sin IVA)</p>
+                  </div>
+                  <div className="text-2xl font-bold text-gray-700">
+                    {formatCurrency(totalAmountWithoutIVA)}
+                  </div>
                 </div>
-                <div className="text-3xl font-bold text-green-600">
-                  {formatCurrency(totalAmount)}
+
+                <div className="flex flex-col sm:flex-row sm:justify-between items-center gap-4">
+                  <div>
+                    <p className="text-lg text-gray-700">IVA (16%)</p>
+                  </div>
+                  <div className="text-2xl font-bold text-amber-600">
+                    {formatCurrency(ivaAmount)}
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:justify-between items-center gap-4 border-t border-gray-300 pt-4">
+                  <div>
+                    <p className="text-lg font-semibold text-gray-800">
+                      Total (con IVA)
+                    </p>
+                  </div>
+                  <div className="text-3xl font-bold text-green-600">
+                    {formatCurrency(totalAmountWithIVA)}
+                  </div>
                 </div>
               </div>
             </div>

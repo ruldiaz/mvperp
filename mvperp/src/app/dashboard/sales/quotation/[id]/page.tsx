@@ -1,3 +1,4 @@
+// src/app/dashboard/sales/quotation/[id]/page.tsx
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
@@ -14,7 +15,35 @@ import {
   pdf,
 } from "@react-pdf/renderer";
 
-// Estilos para el PDF — SIN MODIFICAR
+// Definir tipos para la información de la empresa
+interface CompanyInfo {
+  id: string;
+  name: string;
+  rfc: string;
+  regime: string;
+  csdCert?: string | null;
+  csdKey?: string | null;
+  csdPassword?: string | null;
+  street: string;
+  exteriorNumber: string;
+  interiorNumber?: string | null;
+  neighborhood: string;
+  postalCode: string;
+  city: string;
+  state: string;
+  municipality: string;
+  country: string;
+  email?: string | null;
+  phone?: string | null;
+  pac?: string | null;
+  pacUser?: string | null;
+  pacPass?: string | null;
+  testMode: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Estilos para el PDF
 const styles = StyleSheet.create({
   page: {
     padding: 30,
@@ -34,6 +63,11 @@ const styles = StyleSheet.create({
   companyInfo: {
     fontSize: 10,
     marginBottom: 2,
+  },
+  companyAddress: {
+    fontSize: 9,
+    marginBottom: 2,
+    textAlign: "center",
   },
   title: {
     fontSize: 18,
@@ -128,8 +162,14 @@ const styles = StyleSheet.create({
   },
 });
 
-// Componente PDF — SIN MODIFICAR
-const QuotationPDFDocument = ({ quotation }: { quotation: Quotation }) => {
+// Componente PDF — MODIFICADO para recibir companyInfo
+const QuotationPDFDocument = ({
+  quotation,
+  companyInfo,
+}: {
+  quotation: Quotation;
+  companyInfo: CompanyInfo | null;
+}) => {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("es-MX", {
       style: "currency",
@@ -149,14 +189,34 @@ const QuotationPDFDocument = ({ quotation }: { quotation: Quotation }) => {
   const iva = quotation.totalAmount * 0.16;
   const total = quotation.totalAmount * 1.16;
 
+  // Función para construir la dirección completa
+  const getFullAddress = () => {
+    if (!companyInfo) return "";
+
+    const addressParts = [
+      `${companyInfo.street} ${companyInfo.exteriorNumber}`,
+      companyInfo.interiorNumber ? `Int. ${companyInfo.interiorNumber}` : null,
+      companyInfo.neighborhood,
+      `${companyInfo.postalCode} ${companyInfo.city}, ${companyInfo.state}`,
+      companyInfo.country,
+    ].filter(Boolean);
+
+    return addressParts.join(", ");
+  };
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <Text style={styles.companyName}>MI EMPRESA</Text>
-          <Text style={styles.companyInfo}>RFC: XXXX010101XXX</Text>
-          <Text style={styles.companyInfo}>Tel: (123) 456-7890</Text>
-          <Text style={styles.companyInfo}>www.miempresa.com</Text>
+          <Text style={styles.companyName}>{companyInfo?.name}</Text>
+          <Text style={styles.companyInfo}>RFC: {companyInfo?.rfc}</Text>
+          {companyInfo?.phone && (
+            <Text style={styles.companyInfo}>Tel: {companyInfo.phone}</Text>
+          )}
+          {companyInfo?.email && (
+            <Text style={styles.companyInfo}>Email: {companyInfo.email}</Text>
+          )}
+          <Text style={styles.companyAddress}>{getFullAddress()}</Text>
         </View>
 
         <Text style={styles.title}>COTIZACIÓN</Text>
@@ -258,7 +318,7 @@ const QuotationPDFDocument = ({ quotation }: { quotation: Quotation }) => {
               <View key={index} style={styles.tableRow}>
                 <Text style={[styles.tableCell, styles.productCell]}>
                   {item.product?.name || "Producto no disponible"}
-                  {item.description && `\n${item.description}`}
+                  {/*item.description && `\n${item.description}`*/}
                 </Text>
                 <Text style={[styles.tableCell, styles.quantityCell]}>
                   {item.quantity}
@@ -342,30 +402,57 @@ export default function QuotationDetailPage() {
   const params = useParams();
   const router = useRouter();
   const [quotation, setQuotation] = useState<Quotation | null>(null);
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [generatingPdf, setGeneratingPdf] = useState(false);
 
   const quotationId = params.id as string;
 
+  // Función para obtener la información de la empresa
+  const fetchCompanyInfo = useCallback(async () => {
+    try {
+      const res = await fetch("/api/company", {
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        console.warn("No se pudo obtener información de la empresa");
+        return null;
+      }
+
+      const data = await res.json();
+      return data.company;
+    } catch (err) {
+      console.error("Error fetching company info:", err);
+      return null;
+    }
+  }, []);
+
   const fetchQuotation = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
 
-      const res = await fetch(`/api/quotations/${quotationId}`, {
-        credentials: "include",
-      });
+      // Obtener la información de la empresa y la cotización en paralelo
+      const [companyRes, quotationRes] = await Promise.all([
+        fetchCompanyInfo(),
+        fetch(`/api/quotations/${quotationId}`, {
+          credentials: "include",
+        }),
+      ]);
 
-      if (!res.ok) {
-        if (res.status === 404) {
+      setCompanyInfo(companyRes);
+
+      if (!quotationRes.ok) {
+        if (quotationRes.status === 404) {
           throw new Error("Cotización no encontrada");
         }
         throw new Error("Error al cargar la cotización");
       }
 
-      const data = await res.json();
-      setQuotation(data.quotation);
+      const quotationData = await quotationRes.json();
+      setQuotation(quotationData.quotation);
     } catch (err) {
       console.error("Error fetching quotation:", err);
       setError(err instanceof Error ? err.message : "Error desconocido");
@@ -375,7 +462,7 @@ export default function QuotationDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [quotationId]);
+  }, [quotationId, fetchCompanyInfo]);
 
   useEffect(() => {
     if (quotationId) {
@@ -467,7 +554,7 @@ export default function QuotationDetailPage() {
     setGeneratingPdf(true);
     try {
       const blob = await pdf(
-        <QuotationPDFDocument quotation={quotation} />
+        <QuotationPDFDocument quotation={quotation} companyInfo={companyInfo} />
       ).toBlob();
 
       const url = URL.createObjectURL(blob);
@@ -493,7 +580,10 @@ export default function QuotationDetailPage() {
     const printPDF = async () => {
       try {
         const blob = await pdf(
-          <QuotationPDFDocument quotation={quotation} />
+          <QuotationPDFDocument
+            quotation={quotation}
+            companyInfo={companyInfo}
+          />
         ).toBlob();
         const url = URL.createObjectURL(blob);
         const printWindow = window.open(url, "_blank");
