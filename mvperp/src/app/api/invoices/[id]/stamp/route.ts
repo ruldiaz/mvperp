@@ -1,7 +1,7 @@
 // app/api/invoices/[id]/stamp/route.ts (corregido)
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { facturamaService } from "@/lib/facturama";
+import { getFacturamaService } from "@/lib/facturama";
 import jwt from "jsonwebtoken";
 import {
   getDefaultCfdiUse,
@@ -256,6 +256,10 @@ export async function POST(
       "Enviando datos a Facturama:",
       JSON.stringify(facturamaData, null, 2)
     );
+
+    // Get Facturama service instance based on company's testMode setting
+    const facturamaService = getFacturamaService(invoice.company.testMode);
+    console.log(`Using Facturama in ${invoice.company.testMode ? 'SANDBOX' : 'PRODUCTION'} mode`);
 
     // Timbrar con Facturama
     const facturamaResponse = await facturamaService.createCfdi(facturamaData);

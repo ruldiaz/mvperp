@@ -133,6 +133,29 @@ export default function CompanyProfile() {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value, type } = e.target;
+    
+    // Special handling for testMode toggle
+    if (name === "testMode" && type === "checkbox") {
+      const newTestMode = (e.target as HTMLInputElement).checked;
+      
+      // If switching to production mode (testMode = false), show warning
+      if (!newTestMode && formData.testMode) {
+        const confirmed = window.confirm(
+          '⚠️ ADVERTENCIA: Activación de Modo PRODUCCIÓN\n\n' +
+          '• Las facturas se timbrarán con el SAT de forma REAL\n' +
+          '• Se consumirán timbres reales (costo por factura)\n' +
+          '• Las facturas serán legalmente válidas\n' +
+          '• La cancelación requiere aprobación del receptor\n' +
+          '• Asegúrese de tener certificados CSD válidos\n\n' +
+          '¿Está seguro de que desea activar el modo PRODUCCIÓN?'
+        );
+        
+        if (!confirmed) {
+          return; // Don't change the value
+        }
+      }
+    }
+    
     setFormData((prev) => ({
       ...prev,
       [name]:
@@ -624,8 +647,8 @@ export default function CompanyProfile() {
                 />
               </div>
 
-              <div className="flex items-center">
-                <div className="flex items-center h-full">
+              <div className="flex items-center justify-between p-4 rounded-lg border-2 border-gray-200 bg-white">
+                <div className="flex items-center">
                   <input
                     type="checkbox"
                     name="testMode"
@@ -635,9 +658,37 @@ export default function CompanyProfile() {
                     className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed"
                   />
                   <label className="ml-3 text-gray-700 font-medium">
-                    Modo Pruebas
+                    Modo Pruebas (Sandbox)
                   </label>
                 </div>
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                  formData.testMode 
+                    ? 'bg-yellow-100 text-yellow-800' 
+                    : 'bg-green-100 text-green-800'
+                }`}>
+                  {formData.testMode ? '🧪 SANDBOX' : '✅ PRODUCCIÓN'}
+                </span>
+              </div>
+              
+              {/* Info box explaining the modes */}
+              <div className={`p-4 rounded-lg border ${
+                formData.testMode 
+                  ? 'bg-yellow-50 border-yellow-200' 
+                  : 'bg-red-50 border-red-200'
+              }`}>
+                <p className="text-sm text-gray-700">
+                  {formData.testMode ? (
+                    <>
+                      <strong>Modo Sandbox:</strong> Las facturas se timbran en el ambiente de pruebas de Facturama. 
+                      No son válidas fiscalmente y no consumen timbres reales. Ideal para desarrollo y pruebas.
+                    </>
+                  ) : (
+                    <>
+                      <strong className="text-red-600">Modo Producción:</strong> Las facturas se timbran con el SAT de forma real. 
+                      Son legalmente válidas, consumen timbres reales y requieren certificados CSD válidos.
+                    </>
+                  )}
+                </p>
               </div>
             </div>
           </div>

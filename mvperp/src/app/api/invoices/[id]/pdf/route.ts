@@ -1,7 +1,7 @@
 // app/api/invoices/[id]/pdf/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { facturamaService } from "@/lib/facturama";
+import { getFacturamaService } from "@/lib/facturama";
 
 export async function GET(
   request: NextRequest,
@@ -14,6 +14,9 @@ export async function GET(
 
     invoice = await prisma.invoice.findUnique({
       where: { id },
+      include: {
+        company: true,
+      },
     });
 
     if (!invoice) {
@@ -37,6 +40,9 @@ export async function GET(
     if (invoice.uuid) {
       console.log(`UUID SAT: ${invoice.uuid}`);
     }
+
+    // Get Facturama service instance based on company's testMode setting
+    const facturamaService = getFacturamaService(invoice.company.testMode);
 
     // Obtener PDF de Facturama
     const pdfResponse = await facturamaService.getPdf(invoice.facturamaId);

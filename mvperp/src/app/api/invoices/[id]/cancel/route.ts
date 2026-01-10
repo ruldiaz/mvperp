@@ -1,7 +1,7 @@
 // src/app/api/invoices/[id]/cancel/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { facturamaService } from "@/lib/facturama";
+import { getFacturamaService } from "@/lib/facturama";
 import jwt from "jsonwebtoken";
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -123,6 +123,10 @@ export async function POST(
     if (folioSustituto) {
       console.log(`Folio sustituto: ${folioSustituto}`);
     }
+
+    // Get Facturama service instance based on company's testMode setting
+    const facturamaService = getFacturamaService(invoice.company.testMode);
+    console.log(`Cancelling in ${invoice.company.testMode ? 'SANDBOX' : 'PRODUCTION'} mode`);
 
     // Cancelar en Facturama
     const cancelResponse = await facturamaService.cancelCfdi(

@@ -1,7 +1,7 @@
 // app/api/invoices/[id]/pdf/status/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { facturamaService } from "@/lib/facturama";
+import { getFacturamaService } from "@/lib/facturama";
 
 export async function GET(
   request: NextRequest,
@@ -12,6 +12,9 @@ export async function GET(
 
     const invoice = await prisma.invoice.findUnique({
       where: { id },
+      include: {
+        company: true,
+      },
     });
 
     if (!invoice || !invoice.facturamaId) {
@@ -20,6 +23,9 @@ export async function GET(
         { status: 404 }
       );
     }
+
+    // Get Facturama service instance based on company's testMode setting
+    const facturamaService = getFacturamaService(invoice.company.testMode);
 
     // Intentar obtener el estado del PDF
     let pdfAvailable = false;

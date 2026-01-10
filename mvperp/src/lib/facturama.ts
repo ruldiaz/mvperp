@@ -108,9 +108,22 @@ class FacturamaService {
       ? "https://apisandbox.facturama.mx"
       : "https://api.facturama.mx";
 
-    // 👇 Usar variables de entorno en lugar de hardcode
-    const username = process.env.FACTURAMA_USERNAME || "tu_usuario_real";
-    const password = process.env.FACTURAMA_PASSWORD || "tu_password_real";
+    // Use different credentials based on mode
+    const username = testMode
+      ? process.env.FACTURAMA_SANDBOX_USERNAME
+      : process.env.FACTURAMA_PROD_USERNAME;
+    
+    const password = testMode
+      ? process.env.FACTURAMA_SANDBOX_PASSWORD
+      : process.env.FACTURAMA_PROD_PASSWORD;
+
+    // Validate credentials exist
+    if (!username || !password) {
+      throw new Error(
+        `Missing Facturama credentials for ${testMode ? 'sandbox' : 'production'} mode. ` +
+        `Please set ${testMode ? 'FACTURAMA_SANDBOX_USERNAME and FACTURAMA_SANDBOX_PASSWORD' : 'FACTURAMA_PROD_USERNAME and FACTURAMA_PROD_PASSWORD'} environment variables.`
+      );
+    }
 
     this.credentials = Buffer.from(`${username}:${password}`).toString(
       "base64"
@@ -268,4 +281,10 @@ class FacturamaService {
   }
 }
 
-export const facturamaService = new FacturamaService();
+// Factory function to create service instance based on testMode
+export function getFacturamaService(testMode: boolean): FacturamaService {
+  return new FacturamaService(testMode);
+}
+
+// Keep backward compatibility - default to sandbox mode
+export const facturamaService = new FacturamaService(true);
