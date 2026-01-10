@@ -145,22 +145,30 @@ export async function PUT(
   const body: UpdateCustomerRequest = await request.json();
 
   try {
-    const customer = await prisma.customer.updateMany({
+    // First check if customer exists and belongs to the company
+    const existingCustomer = await prisma.customer.findFirst({
       where: {
         id,
         companyId: auth.user.companyId,
       },
-      data: body,
     });
 
-    if (customer.count === 0) {
+    if (!existingCustomer) {
       return NextResponse.json(
         { error: "Customer not found" },
         { status: 404 }
       );
     }
 
-    return NextResponse.json({ success: true });
+    // Update and return the updated customer
+    const updatedCustomer = await prisma.customer.update({
+      where: {
+        id,
+      },
+      data: body,
+    });
+
+    return NextResponse.json({ customer: updatedCustomer });
   } catch (error) {
     console.error("UPDATE CUSTOMER ERROR:", error);
     return NextResponse.json(

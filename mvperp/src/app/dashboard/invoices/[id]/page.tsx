@@ -8,6 +8,23 @@ import { Invoice } from "@/types/invoice";
 import StampInvoiceButton from "@/app/dashboard/components/invoice/StampInvoiceButton";
 import CancelInvoiceButton from "@/app/dashboard/components/invoice/CancelInvoiceButton";
 import { toast } from "react-hot-toast";
+import { ValidationError } from "@/lib/invoiceValidator";
+
+interface ValidationResponse {
+  validation: {
+    isValid: boolean;
+    errors: ValidationError[];
+    warnings: ValidationError[];
+    canStamp: boolean;
+    canPreview: boolean;
+  };
+  invoice: {
+    id: string;
+    status: string;
+    serie?: string | null;
+    folio?: string | null;
+  };
+}
 
 export default function InvoiceDetail() {
   const params = useParams();
@@ -15,6 +32,9 @@ export default function InvoiceDetail() {
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchInvoice = async () => {
@@ -47,6 +67,84 @@ export default function InvoiceDetail() {
 
   const handleStamped = () => {
     router.refresh();
+  };
+
+  const handlePreview = async () => {
+    setPreviewLoading(true);
+    setValidationErrors([]);
+    setValidationWarnings([]);
+
+    try {
+      // First, validate the invoice
+      const validateRes = await fetch(
+        `/api/invoices/${params.id}/preview?validate=true`,
+        {
+          credentials: "include",
+        }
+      );
+
+      if (!validateRes.ok) {
+        throw new Error("Error al validar la factura");
+      }
+
+      const validateData = (await validateRes.json()) as ValidationResponse;
+      const validation = validateData.validation;
+
+      // Store validation results
+      if (validation.errors && validation.errors.length > 0) {
+        setValidationErrors(
+          validation.errors.map((e) => `${e.field}: ${e.message}`)
+        );
+      }
+
+      if (validation.warnings && validation.warnings.length > 0) {
+        setValidationWarnings(
+          validation.warnings.map((w) => `${w.field}: ${w.message}`)
+        );
+      }
+
+      // Show validation results
+      if (validation.errors && validation.errors.length > 0) {
+        toast.error(
+          `La factura tiene ${validation.errors.length} error(es) de validación. Revise los detalles abajo.`
+        );
+      } else if (validation.warnings && validation.warnings.length > 0) {
+        toast.success(
+          `Validación exitosa con ${validation.warnings.length} advertencia(s). Puede previsualizar el PDF.`,
+          { duration: 4000 }
+        );
+      } else {
+        toast.success("✅ Validación exitosa. Generando previsualización...");
+      }
+
+      // Generate and download PDF preview
+      const previewRes = await fetch(`/api/invoices/${params.id}/preview`, {
+        credentials: "include",
+      });
+
+      if (!previewRes.ok) {
+        throw new Error("Error al generar la previsualización");
+      }
+
+      // Get PDF blob and download
+      const blob = await previewRes.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `preview-factura-${invoice?.serie || ""}-${invoice?.folio || invoice?.id?.slice(0, 8) || "temp"}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast.success("📄 Previsualización descargada exitosamente");
+    } catch (err) {
+      console.error("Error previewing invoice:", err);
+      const message = err instanceof Error ? err.message : "Error desconocido";
+      toast.error(message);
+    } finally {
+      setPreviewLoading(false);
+    }
   };
 
   const formatCurrency = (amount?: number) => {
@@ -403,13 +501,93 @@ export default function InvoiceDetail() {
           </div>
         </div>
 
+        {/* Validation Results */}
+        {(validationErrors.length > 0 || validationWarnings.length > 0) && (
+          <div className="mt-8 space-y-4">
+            {validationErrors.length > 0 && (
+              <div className="p-6 rounded-2xl bg-gradient-to-r from-red-50 to-pink-50 border border-red-200">
+                <div className="flex items-start gap-3">
+                  <div className="text-2xl">❌</div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-red-800 mb-2">
+                      Errores de Validación ({validationErrors.length})
+                    </h3>
+                    <p className="text-sm text-red-600 mb-3">
+                      Debe corregir estos errores antes de timbrar la factura.
+                    </p>
+                    <ul className="space-y-2">
+                      {validationErrors.map((error, index) => (
+                        <li
+                          key={index}
+                          className="text-sm text-red-700 flex items-start gap-2"
+                        >
+                          <span className="text-red-500">•</span>
+                          <span>{error}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {validationWarnings.length > 0 && (
+              <div className="p-6 rounded-2xl bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200">
+                <div className="flex items-start gap-3">
+                  <div className="text-2xl">⚠️</div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-yellow-800 mb-2">
+                      Advertencias ({validationWarnings.length})
+                    </h3>
+                    <p className="text-sm text-yellow-600 mb-3">
+                      Estas advertencias no bloquean el timbrado, pero se
+                      recomienda revisarlas.
+                    </p>
+                    <ul className="space-y-2">
+                      {validationWarnings.map((warning, index) => (
+                        <li
+                          key={index}
+                          className="text-sm text-yellow-700 flex items-start gap-2"
+                        >
+                          <span className="text-yellow-500">•</span>
+                          <span>{warning}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Acciones */}
         <div className="mt-8 flex flex-wrap gap-4 justify-end">
           {invoice.status === "pending" && (
-            <StampInvoiceButton
-              invoiceId={invoice.id!}
-              onStamped={handleStamped}
-            />
+            <>
+              <button
+                onClick={handlePreview}
+                disabled={previewLoading}
+                className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-600 hover:to-indigo-600 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {previewLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Generando...
+                  </>
+                ) : (
+                  <>
+                    <span className="mr-2">🔍</span>
+                    Previsualizar Factura
+                  </>
+                )}
+              </button>
+
+              <StampInvoiceButton
+                invoiceId={invoice.id!}
+                onStamped={handleStamped}
+              />
+            </>
           )}
 
           {invoice.status === "stamped" && (

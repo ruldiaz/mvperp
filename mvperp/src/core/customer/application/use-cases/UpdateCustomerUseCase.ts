@@ -27,6 +27,7 @@ export interface UpdateCustomerInput {
 
 export interface UpdateCustomerOutput {
   id: string;
+  companyId: string;
   name: string;
   razonSocial: string;
   email: string | null;
@@ -36,6 +37,16 @@ export interface UpdateCustomerOutput {
   usoCFDI: string | null;
   taxRegime: string | null;
   fiscalAddress: string | null;
+  fiscalStreet: string | null;
+  fiscalExteriorNumber: string | null;
+  fiscalInteriorNumber: string | null;
+  fiscalNeighborhood: string | null;
+  fiscalPostalCode: string | null;
+  fiscalCity: string | null;
+  fiscalState: string | null;
+  fiscalMunicipality: string | null;
+  fiscalCountry: string | null;
+  createdAt: Date;
   updatedAt: Date;
 }
 
@@ -137,9 +148,10 @@ export class UpdateCustomerUseCase {
       // 6. Persistir cambios
       await this.customerRepository.update(customer);
 
-      // 7. Retornar resultado
+      // 7. Retornar resultado completo con todos los campos
       return {
         id: customer.getId(),
+        companyId: customer.getCompanyId(),
         name: customer.getName(),
         razonSocial: customer.getRazonSocial(),
         email: customer.getEmail(),
@@ -149,6 +161,16 @@ export class UpdateCustomerUseCase {
         usoCFDI: customer.getUsoCFDI(),
         taxRegime: customer.getTaxRegime(),
         fiscalAddress: customer.getFiscalAddress(),
+        fiscalStreet: customer.getFiscalStreet(),
+        fiscalExteriorNumber: customer.getFiscalExteriorNumber(),
+        fiscalInteriorNumber: customer.getFiscalInteriorNumber(),
+        fiscalNeighborhood: customer.getFiscalNeighborhood(),
+        fiscalPostalCode: customer.getFiscalPostalCode(),
+        fiscalCity: customer.getFiscalCity(),
+        fiscalState: customer.getFiscalState(),
+        fiscalMunicipality: customer.getFiscalMunicipality(),
+        fiscalCountry: customer.getFiscalCountry(),
+        createdAt: customer.getCreatedAt(),
         updatedAt: customer.getUpdatedAt(),
       };
     } catch (error) {

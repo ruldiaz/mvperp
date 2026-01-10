@@ -7,6 +7,7 @@ import {
   getDefaultCfdiUse,
   validateExpeditionPlaceForRfc,
 } from "@/lib/cfdiHelpers";
+import { InvoiceValidator } from "@/lib/invoiceValidator";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -90,6 +91,82 @@ export async function POST(
         { error: "Datos incompletos para facturar" },
         { status: 400 }
       );
+    }
+
+    // ✅ NUEVO: Validate invoice before stamping
+    const validator = new InvoiceValidator();
+    const validationResult = validator.validate({
+      invoice: {
+        id: invoice.id,
+        status: invoice.status,
+        paymentMethod: invoice.paymentMethod,
+        paymentForm: invoice.paymentForm,
+        cfdiUse: invoice.cfdiUse,
+        subtotal: invoice.subtotal,
+        taxes: invoice.taxes,
+      },
+      company: {
+        id: invoice.company.id,
+        rfc: invoice.company.rfc,
+        name: invoice.company.name,
+        regime: invoice.company.regime,
+        postalCode: invoice.company.postalCode,
+        csdCert: invoice.company.csdCert,
+        csdKey: invoice.company.csdKey,
+        csdPassword: invoice.company.csdPassword,
+      },
+      customer: {
+        id: invoice.customer.id,
+        name: invoice.customer.name,
+        email: invoice.customer.email,
+        rfc: invoice.customer.rfc,
+        razonSocial: invoice.customer.razonSocial,
+        taxRegime: invoice.customer.taxRegime,
+        fiscalAddress: invoice.customer.fiscalAddress,
+        fiscalPostalCode: invoice.customer.fiscalPostalCode,
+        usoCFDI: invoice.customer.usoCFDI,
+      },
+      items: invoice.invoiceItems.map((item) => ({
+        id: item.id,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.totalPrice,
+        saleItem: item.saleItem
+          ? {
+              description: item.saleItem.description,
+              product: item.saleItem.product
+                ? {
+                    name: item.saleItem.product.name,
+                    sku: item.saleItem.product.sku,
+                    satKey: item.saleItem.product.satKey,
+                    satUnitKey: item.saleItem.product.satUnitKey,
+                    saleUnit: item.saleItem.product.saleUnit,
+                    iva: item.saleItem.product.iva,
+                    ieps: item.saleItem.product.ieps,
+                  }
+                : null,
+            }
+          : null,
+      })),
+    });
+
+    // ✅ NUEVO: Block stamping if validation errors exist
+    if (!validationResult.canStamp) {
+      console.error("Validation errors:", validationResult.errors);
+      return NextResponse.json(
+        {
+          error: "La factura tiene errores de validación",
+          validationErrors: validationResult.errors,
+          validationWarnings: validationResult.warnings,
+          details: "Corrija los errores antes de timbrar",
+        },
+        { status: 400 }
+      );
+    }
+
+    // ✅ Log warnings (but allow stamping)
+    if (validationResult.warnings.length > 0) {
+      console.warn("Validation warnings:", validationResult.warnings);
     }
 
     // Preparar datos para Facturama
