@@ -34,6 +34,7 @@ interface InvoiceValidationData {
     csdCert?: string | null;
     csdKey?: string | null;
     csdPassword?: string | null;
+    testMode: boolean;
   };
   customer: {
     id: string;
@@ -181,13 +182,26 @@ export class InvoiceValidator {
 
     // Validate CSD certificates (required for production)
     if (!company.csdCert || !company.csdKey || !company.csdPassword) {
-      this.warnings.push({
-        field: "company.certificates",
-        message:
-          "No se han configurado los certificados CSD. Solo funcionará en modo sandbox",
-        severity: "warning",
-        code: "MISSING_CSD_CERTIFICATES",
-      });
+      if (!company.testMode) {
+        // ✅ PRODUCTION MODE: CSD is REQUIRED
+        this.errors.push({
+          field: "company.certificates",
+          message:
+            "Los certificados CSD son obligatorios para timbrar en modo producción. " +
+            "Suba su certificado (.cer), llave privada (.key) y contraseña en Perfil de Empresa.",
+          severity: "error",
+          code: "MISSING_CSD_CERTIFICATES_PROD",
+        });
+      } else {
+        // ✅ SANDBOX MODE: CSD is optional (just a warning)
+        this.warnings.push({
+          field: "company.certificates",
+          message:
+            "No se han configurado los certificados CSD. Solo funcionará en modo sandbox",
+          severity: "warning",
+          code: "MISSING_CSD_CERTIFICATES",
+        });
+      }
     }
   }
 

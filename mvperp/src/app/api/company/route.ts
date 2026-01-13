@@ -143,6 +143,43 @@ export async function POST(
 
     const data = await req.json();
 
+    // ✅ Validate production mode requirements
+    if (data.testMode === false) {
+      // Check if production credentials are configured
+      if (!process.env.FACTURAMA_PROD_USERNAME || 
+          !process.env.FACTURAMA_PROD_PASSWORD) {
+        return NextResponse.json(
+          {
+            error: "No se puede activar el modo producción",
+            details: "Las credenciales de Facturama para producción no están configuradas en el servidor. " +
+                     "Contacte al administrador del sistema para configurar FACTURAMA_PROD_USERNAME y FACTURAMA_PROD_PASSWORD.",
+            company: null,
+          },
+          { status: 400 }
+        );
+      }
+
+      // Check if CSD certificates are uploaded
+      const userWithCompany = await prisma.user.findUnique({
+        where: { id: payload.userId },
+        include: { company: true },
+      });
+
+      if (!userWithCompany?.company?.csdCert || 
+          !userWithCompany?.company?.csdKey || 
+          !userWithCompany?.company?.csdPassword) {
+        return NextResponse.json(
+          {
+            error: "No se puede activar el modo producción",
+            details: "Debe cargar y validar los certificados CSD antes de activar el modo producción. " +
+                     "Suba su certificado (.cer), llave privada (.key) y contraseña en la sección de Certificado de Sello Digital.",
+            company: null,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
     });
