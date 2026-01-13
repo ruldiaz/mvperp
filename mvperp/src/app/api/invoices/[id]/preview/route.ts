@@ -97,6 +97,7 @@ export async function GET(
         csdCert: invoice.company.csdCert,
         csdKey: invoice.company.csdKey,
         csdPassword: invoice.company.csdPassword,
+        testMode: invoice.company.testMode,
       },
       customer: {
         id: invoice.customer.id,
