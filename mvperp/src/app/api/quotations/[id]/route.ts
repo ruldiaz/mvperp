@@ -169,25 +169,72 @@ export async function PUT(
       );
     }
 
-    const quotation = await prisma.quotation.update({
-      where: { id },
-      data: {
-        customerId: body.customerId,
-        expiryDate: body.expiryDate ? new Date(body.expiryDate) : null,
-        status: body.status,
-        notes: body.notes,
-      },
-      include: {
-        customer: true,
-        quotationItems: {
-          include: {
-            product: true,
+    let updatedQuotation;
+
+    await prisma.$transaction(async (tx) => {
+      // Si se envían items, eliminar los anteriores y crear los nuevos para recalcular todo
+      if (body.quotationItems && body.quotationItems.length > 0) {
+        await tx.quotationItem.deleteMany({
+          where: { quotationId: id },
+        });
+
+        // Recalcular totalAmount
+        const totalAmount = body.quotationItems.reduce((sum, item) => {
+          return sum + item.quantity * item.unitPrice;
+        }, 0);
+
+        updatedQuotation = await tx.quotation.update({
+          where: { id },
+          data: {
+            customerId: body.customerId,
+            expiryDate: body.expiryDate ? new Date(body.expiryDate) : null,
+            status: body.status,
+            notes: body.notes,
+            totalAmount: totalAmount,
+            quotationItems: {
+              create: body.quotationItems.map((item) => ({
+                productId: item.productId,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                totalPrice: item.quantity * item.unitPrice,
+                satProductKey: item.satProductKey,
+                satUnitKey: item.satUnitKey,
+                description: item.description,
+              })),
+            },
           },
-        },
-      },
+          include: {
+            customer: true,
+            quotationItems: {
+              include: {
+                product: true,
+              },
+            },
+          },
+        });
+      } else {
+        // Actualización sin cambiar items (ejem: solo cambia notas o estatus)
+        updatedQuotation = await tx.quotation.update({
+          where: { id },
+          data: {
+            customerId: body.customerId,
+            expiryDate: body.expiryDate ? new Date(body.expiryDate) : null,
+            status: body.status,
+            notes: body.notes,
+          },
+          include: {
+            customer: true,
+            quotationItems: {
+              include: {
+                product: true,
+              },
+            },
+          },
+        });
+      }
     });
 
-    return NextResponse.json({ quotation });
+    return NextResponse.json({ quotation: updatedQuotation });
   } catch (error) {
     console.error("Error updating quotation:", error);
 

@@ -102,4 +102,5 @@ export interface UpdateQuotationRequest {
   expiryDate?: string;
   status?: string;
   notes?: string;
+  quotationItems?: Omit<QuotationItem, "id" | "totalPrice" | "product">[];
 }
