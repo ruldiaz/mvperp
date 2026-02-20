@@ -40,7 +40,7 @@ const menuItems: MenuItem[] = [
   {
     id: "inicio",
     path: "/dashboard",
-    label: "INICIO",
+    label: "Inicio",
     icon: (
       <IconWrapper>
         <Home size={18} />
@@ -50,7 +50,7 @@ const menuItems: MenuItem[] = [
   {
     id: "productos",
     path: "/dashboard/products",
-    label: "PRODUCTOS",
+    label: "Productos",
     icon: (
       <IconWrapper>
         <Package size={18} />
@@ -60,7 +60,7 @@ const menuItems: MenuItem[] = [
   {
     id: "clientes",
     path: "/dashboard/customers",
-    label: "CLIENTES",
+    label: "Clientes",
     icon: (
       <IconWrapper>
         <Users size={18} />
@@ -70,7 +70,7 @@ const menuItems: MenuItem[] = [
   {
     id: "ventas",
     path: "/dashboard/sales",
-    label: "VENTAS",
+    label: "Ventas",
     icon: (
       <IconWrapper>
         <DollarSign size={18} />
@@ -80,7 +80,7 @@ const menuItems: MenuItem[] = [
       {
         id: "cotizacion",
         path: "/dashboard/sales/quotation",
-        label: "COTIZACIÓN",
+        label: "Cotización",
         icon: (
           <IconWrapper>
             <Quote size={16} />
@@ -90,7 +90,7 @@ const menuItems: MenuItem[] = [
       {
         id: "ventas-list",
         path: "/dashboard/sales",
-        label: "LISTA VENTAS",
+        label: "Lista Ventas",
         icon: (
           <IconWrapper>
             <DollarSign size={16} />
@@ -102,7 +102,7 @@ const menuItems: MenuItem[] = [
   {
     id: "compras",
     path: "/dashboard/purchases",
-    label: "COMPRAS",
+    label: "Compras",
     icon: (
       <IconWrapper>
         <ShoppingCart size={18} />
@@ -112,7 +112,7 @@ const menuItems: MenuItem[] = [
   {
     id: "proveedores",
     path: "/dashboard/suppliers",
-    label: "PROVEEDORES",
+    label: "Proveedores",
     icon: (
       <IconWrapper>
         <Building size={18} />
@@ -122,7 +122,7 @@ const menuItems: MenuItem[] = [
   {
     id: "facturas",
     path: "/dashboard/invoices",
-    label: "FACTURAS",
+    label: "Facturas",
     icon: (
       <IconWrapper>
         <Building size={18} />
@@ -132,7 +132,7 @@ const menuItems: MenuItem[] = [
   {
     id: "perfil",
     path: "/dashboard/profile",
-    label: "PERFIL FISCAL",
+    label: "Perfil Fiscal",
     icon: (
       <IconWrapper>
         <UserCircle size={18} />
@@ -142,7 +142,7 @@ const menuItems: MenuItem[] = [
   {
     id: "ajustes",
     path: "/dashboard/settings",
-    label: "AJUSTES",
+    label: "Ajustes",
     icon: (
       <IconWrapper>
         <Settings size={18} />
