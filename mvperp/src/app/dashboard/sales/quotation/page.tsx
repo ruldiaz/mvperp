@@ -415,6 +415,14 @@ export default function Quotations() {
                         Ver
                       </Link>
                       {quotation.status === "pending" && (
+                        <Link
+                          href={`/dashboard/sales/quotation/${quotation.id}/edit`}
+                          className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow hover:shadow-md transition-all duration-200 whitespace-nowrap"
+                        >
+                          Editar
+                        </Link>
+                      )}
+                      {quotation.status === "pending" && (
                         <button
                           onClick={() => handleConvertToSale(quotation)}
                           className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow hover:shadow-md transition-all duration-200 whitespace-nowrap"
