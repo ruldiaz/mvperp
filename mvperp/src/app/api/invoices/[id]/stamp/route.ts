@@ -8,6 +8,7 @@ import {
   validateExpeditionPlaceForRfc,
 } from "@/lib/cfdiHelpers";
 import { InvoiceValidator } from "@/lib/invoiceValidator";
+import { rateLimiter, STAMP_RATE_LIMITS } from "@/lib/rateLimiter";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -50,6 +51,85 @@ export async function POST(
       return NextResponse.json(
         { error: authResult.error },
         { status: authResult.status }
+      );
+    }
+
+    // ✅ RATE LIMITING: Prevent accidental mass stamping
+    // First, quickly check testMode to determine rate limits
+    const invoiceForRateLimit = await prisma.invoice.findUnique({
+      where: { id },
+      select: {
+        company: {
+          select: { testMode: true },
+        },
+      },
+    });
+
+    if (!invoiceForRateLimit) {
+      return NextResponse.json(
+        { error: "Factura no encontrada" },
+        { status: 404 }
+      );
+    }
+
+    // Apply different rate limits based on production vs sandbox mode
+    const isProduction = !invoiceForRateLimit.company.testMode;
+    const limits = isProduction
+      ? STAMP_RATE_LIMITS.production
+      : STAMP_RATE_LIMITS.sandbox;
+
+    const userId = authResult.user.userId;
+
+    // Check per-minute limit
+    const minuteKey = `stamp:${userId}:minute`;
+    if (!rateLimiter.check(minuteKey, limits.perMinute, 60 * 1000)) {
+      const resetTime = rateLimiter.getResetTime(minuteKey);
+
+      return NextResponse.json(
+        {
+          error: "Demasiadas solicitudes de timbrado",
+          message:
+            `Ha excedido el límite de ${limits.perMinute} facturas por minuto en modo ${isProduction ? "producción" : "sandbox"}. ` +
+            `Intente nuevamente en ${resetTime} segundos.`,
+          retryAfter: resetTime,
+          limit: limits.perMinute,
+          mode: isProduction ? "production" : "sandbox",
+        },
+        {
+          status: 429, // Too Many Requests
+          headers: {
+            "Retry-After": resetTime.toString(),
+            "X-RateLimit-Limit": limits.perMinute.toString(),
+            "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Reset": resetTime.toString(),
+          },
+        }
+      );
+    }
+
+    // Check per-hour limit
+    const hourKey = `stamp:${userId}:hour`;
+    if (!rateLimiter.check(hourKey, limits.perHour, 60 * 60 * 1000)) {
+      const resetTime = rateLimiter.getResetTime(hourKey);
+
+      return NextResponse.json(
+        {
+          error: "Límite por hora excedido",
+          message:
+            `Ha excedido el límite de ${limits.perHour} facturas por hora en modo ${isProduction ? "producción" : "sandbox"}. ` +
+            `Intente nuevamente en ${Math.ceil(resetTime / 60)} minutos.`,
+          retryAfter: resetTime,
+          limit: limits.perHour,
+          mode: isProduction ? "production" : "sandbox",
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": resetTime.toString(),
+            "X-RateLimit-Limit": limits.perHour.toString(),
+            "X-RateLimit-Remaining": "0",
+          },
+        }
       );
     }
 
