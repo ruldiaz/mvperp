@@ -140,7 +140,7 @@ export default function Navbar() {
                   }}
                 >
                   <Box sx={{ color: "#94a3b8" }}>{item.icon}</Box>
-                  <Typography variant="body2" fontWeight={500}>
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
                     {item.nombre}
                   </Typography>
                 </MenuItem>
