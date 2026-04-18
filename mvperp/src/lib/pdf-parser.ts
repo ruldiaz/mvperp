@@ -62,8 +62,9 @@ export const extractTextFromPdf = async (file: File): Promise<ExtractedItem[]> =
     const textContent = await page.getTextContent();
 
     // Filter: only keep items that have str and transform (skip TextMarkedContent)
-    const items = textContent.items.filter(
-      (item): item is TextItem => 'str' in item && 'transform' in item && typeof (item as TextItem).str === 'string'
+    const rawItems = textContent.items as any[];
+    const items: TextItem[] = rawItems.filter(
+      (item) => 'str' in item && 'transform' in item && typeof item.str === 'string'
     );
 
     console.log(`[PDF Parser] Page ${i}: ${items.length} text items`);
