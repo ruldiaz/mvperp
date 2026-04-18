@@ -31,6 +31,7 @@ import {
   Quote,
   ShieldCheck,
   Briefcase,
+  Menu,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -124,8 +125,10 @@ export default function Sidebar({ setSelectedPage }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [openSubmenus, setOpenSubmenus] = useState<{ [key: string]: boolean }>({});
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const toggleSubmenu = (menuId: string) => {
+    if (isCollapsed) setIsCollapsed(false);
     setOpenSubmenus((prev) => ({ ...prev, [menuId]: !prev[menuId] }));
   };
 
@@ -148,26 +151,30 @@ export default function Sidebar({ setSelectedPage }: SidebarProps) {
               borderRadius: 2,
               mx: 1,
               py: 1.2,
+              px: isCollapsed ? 1 : 2,
+              justifyContent: isCollapsed ? "center" : "flex-start",
               bgcolor: isActive && !hasSub ? alpha("#334155", 0.08) : "transparent",
               color: isActive ? "#1e293b" : "#64748b",
               "&:hover": { bgcolor: alpha("#334155", 0.04) },
             }}
           >
-            <ListItemIcon sx={{ minWidth: 40, color: isActive ? "#334155" : "#94a3b8" }}>
+            <ListItemIcon sx={{ minWidth: isCollapsed ? 0 : 40, justifyContent: "center", color: isActive ? "#334155" : "#94a3b8" }}>
               {item.icon}
             </ListItemIcon>
-            <ListItemText 
-              primary={
-                <Typography sx={{ 
-                  fontSize: isSub ? "0.85rem" : "0.9rem", 
-                  fontWeight: isActive ? 700 : 500,
-                  letterSpacing: "-0.01em"
-                }}>
-                  {item.label}
-                </Typography>
-              } 
-            />
-            {hasSub && (
+            {!isCollapsed && (
+              <ListItemText 
+                primary={
+                  <Typography sx={{ 
+                    fontSize: isSub ? "0.85rem" : "0.9rem", 
+                    fontWeight: isActive ? 700 : 500,
+                    letterSpacing: "-0.01em"
+                  }}>
+                    {item.label}
+                  </Typography>
+                } 
+              />
+            )}
+            {!isCollapsed && hasSub && (
               <ChevronDown 
                 size={16} 
                 style={{ 
@@ -192,48 +199,76 @@ export default function Sidebar({ setSelectedPage }: SidebarProps) {
   };
 
   return (
-    <Box sx={{ width: 280, bgcolor: "white", borderRight: "1px solid #e2e8f0", display: "flex", flexDirection: "column" }}>
+    <Box sx={{ width: isCollapsed ? 80 : 280, transition: "width 0.3s ease", bgcolor: "white", borderRight: "1px solid #e2e8f0", display: "flex", flexDirection: "column" }}>
       {/* Brand Header */}
-      <Box sx={{ p: 4, display: "flex", alignItems: "center", gap: 1.5 }}>
-        <Box sx={{ width: 36, height: 36, bgcolor: "#334155", borderRadius: 1.5, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <ShieldCheck color="white" size={22} strokeWidth={1.5} />
+      <Box sx={{ 
+        p: isCollapsed ? 2 : 4, 
+        pt: 4,
+        display: "flex", 
+        alignItems: "center", 
+        gap: 1.5,
+        justifyContent: isCollapsed ? "center" : "flex-start",
+      }}>
+        <Box 
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          sx={{ 
+            width: 36, 
+            height: 36, 
+            bgcolor: "#334155", 
+            borderRadius: 1.5, 
+            display: "flex", 
+            alignItems: "center", 
+            justifyContent: "center",
+            cursor: "pointer",
+            "&:hover": { bgcolor: "#1e293b" }
+          }}
+        >
+          <Menu color="white" size={22} strokeWidth={1.5} />
         </Box>
-        <Box>
-          <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "#1e293b", lineHeight: 1.2 }}>MVP ERP</Typography>
-          <Typography variant="caption" sx={{ color: "#94a3b8", fontWeight: 600 }}>ADMINISTRACIÓN</Typography>
-        </Box>
+        {!isCollapsed && (
+          <Box>
+            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "#1e293b", lineHeight: 1.2 }}>MVP ERP</Typography>
+            <Typography variant="caption" sx={{ color: "#94a3b8", fontWeight: 600 }}>ADMINISTRACIÓN</Typography>
+          </Box>
+        )}
       </Box>
 
       <Divider sx={{ mx: 2, mb: 2, opacity: 0.6 }} />
 
       {/* Main Navigation */}
       <Box sx={{ flex: 1, overflowY: "auto", px: 1 }}>
-        <Typography variant="caption" sx={{ px: 3, mb: 1, display: "block", color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-          Navegación Principal
-        </Typography>
+        {!isCollapsed && (
+          <Typography variant="caption" sx={{ px: 3, mb: 1, display: "block", color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            Navegación Principal
+          </Typography>
+        )}
         <List>{menuItems.map(item => renderItem(item))}</List>
 
         <Box sx={{ mt: 4 }}>
-          <Typography variant="caption" sx={{ px: 3, mb: 1, display: "block", color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-            Sistema
-          </Typography>
+          {!isCollapsed && (
+            <Typography variant="caption" sx={{ px: 3, mb: 1, display: "block", color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Sistema
+            </Typography>
+          )}
           <List>{secondaryItems.map(item => renderItem(item))}</List>
         </Box>
       </Box>
 
       {/* Sidebar Footer */}
-      <Box sx={{ p: 2 }}>
-        <Box sx={{ p: 2, bgcolor: "#f8fafc", borderRadius: 3, border: "1px solid #f1f5f9" }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
-            <HelpCircle size={16} color="#64748b" />
-            <Typography variant="body2" sx={{ fontWeight: 600, color: "#475569" }}>Soporte Técnico</Typography>
+      {!isCollapsed && (
+        <Box sx={{ p: 2 }}>
+          <Box sx={{ p: 2, bgcolor: "#f8fafc", borderRadius: 3, border: "1px solid #f1f5f9" }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+              <HelpCircle size={16} color="#64748b" />
+              <Typography variant="body2" sx={{ fontWeight: 600, color: "#475569" }}>Soporte Técnico</Typography>
+            </Box>
+            <Typography variant="caption" sx={{ color: "#94a3b8", display: "block", mb: 2 }}>¿Necesitas ayuda con el sistema?</Typography>
+            <Button fullWidth variant="outlined" size="small" sx={{ textTransform: "none", borderRadius: 1.5, borderColor: "#e2e8f0", color: "#475569" }}>
+              Contactar
+            </Button>
           </Box>
-          <Typography variant="caption" sx={{ color: "#94a3b8", display: "block", mb: 2 }}>¿Necesitas ayuda con el sistema?</Typography>
-          <Button fullWidth variant="outlined" size="small" sx={{ textTransform: "none", borderRadius: 1.5, borderColor: "#e2e8f0", color: "#475569" }}>
-            Contactar
-          </Button>
         </Box>
-      </Box>
+      )}
     </Box>
   );
 }
