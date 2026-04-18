@@ -266,7 +266,6 @@ export default function Register() {
                     value={formData.companyRfc}
                     onChange={handleChange}
                     required
-                    maxLength={13}
                     slotProps={{
                       input: {
                         startAdornment: (
@@ -274,6 +273,9 @@ export default function Register() {
                             <FileText size={18} color="#94a3b8" />
                           </InputAdornment>
                         ),
+                      },
+                      htmlInput: {
+                        maxLength: 13,
                       },
                     }}
                     sx={{ "& .MuiOutlinedInput-root": { borderRadius: 1.5 } }}
