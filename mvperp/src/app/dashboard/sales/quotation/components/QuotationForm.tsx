@@ -34,9 +34,11 @@ import {
   Calendar,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Product } from "@/types/product";
+import { Product, QuotationItem } from "@/types/product";
 import { Customer } from "@/types/customer";
 import { toast } from "react-hot-toast";
+import PdfImporter from "./PdfImporter";
+import { ImportedItemData } from "@/types/import-types";
 
 const IVA_PERCENTAGE = 0.16;
 
@@ -63,9 +65,14 @@ interface QuotationFormProps {
     customerId: string;
     expiryDate?: string;
     notes?: string;
-    quotationItems: any[];
+    quotationItems: QuotationItem[];
   };
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: {
+    customerId: string;
+    expiryDate?: string;
+    quotationItems: Array<Partial<QuotationItem> & Pick<QuotationItem, 'productId' | 'quantity' | 'unitPrice'>>;
+    notes: string;
+  }) => Promise<void>;
   title: string;
   submitLabel: string;
   isSubmitting: boolean;
@@ -201,7 +208,11 @@ export default function QuotationForm({
     setItems([...items, newItem]);
   };
 
-  const updateItem = (index: number, field: keyof ExtendedQuotationItem, value: any) => {
+  const updateItem = <T extends keyof ExtendedQuotationItem>(
+    index: number,
+    field: T,
+    value: ExtendedQuotationItem[T]
+  ) => {
     setItems((prev) => {
       const newItems = [...prev];
       const updatedItem = { ...newItems[index], [field]: value };
@@ -231,6 +242,21 @@ export default function QuotationForm({
       newItems[index] = calculateItemMath(updatedItem, pricingMode, globalMargin);
       return newItems;
     });
+  };
+
+  const handleImportPdf = (importedItems: ImportedItemData[], newProduct?: Product) => {
+    if (newProduct) {
+      setProducts(prev => [newProduct, ...prev]);
+    }
+    setItems((prev) => [
+      ...prev,
+      ...importedItems.map((item) => ({
+        ...item,
+        margin: pricingMode === "global_margin" ? globalMargin : item.margin,
+        showDetails: false,
+      })),
+    ].map(item => calculateItemMath(item, pricingMode, globalMargin)));
+    toast.success(`${importedItems.length} partidas importadas correctamente`);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -287,6 +313,7 @@ export default function QuotationForm({
           Regresar
         </Button>
       </Box>
+
 
       {/* Pricing Config - Neutral Gray Style */}
       <Paper variant="outlined" sx={{ mb: 6, p: 3, borderRadius: 2, border: '1px solid #e2e8f0', bgcolor: '#f8fafc' }}>
@@ -378,14 +405,17 @@ export default function QuotationForm({
           <FileText size={18} strokeWidth={1.5} color="#475569" />
           <Typography sx={{ fontWeight: 600, color: '#334155' }}>Líneas de Detalle</Typography>
         </Box>
-        <Button
-          variant="outlined"
-          startIcon={<Plus size={16} strokeWidth={2} />}
-          onClick={addItem}
-          sx={{ borderRadius: 1.5, textTransform: 'none', color: '#475569', borderColor: '#cbd5e1', '&:hover': { bgcolor: '#f8fafc', borderColor: '#94a3b8' } }}
-        >
-          Nuevo Item
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <PdfImporter onImport={handleImportPdf} products={products} />
+          <Button
+            variant="outlined"
+            startIcon={<Plus size={16} strokeWidth={2} />}
+            onClick={addItem}
+            sx={{ borderRadius: 1.5, textTransform: 'none', color: '#475569', borderColor: '#cbd5e1', '&:hover': { bgcolor: '#f8fafc', borderColor: '#94a3b8' } }}
+          >
+            Nuevo Item
+          </Button>
+        </Box>
       </Box>
 
       {items.length === 0 ? (
@@ -418,6 +448,11 @@ export default function QuotationForm({
                       ))}
                     </Select>
                   </FormControl>
+                  {item.description && item.description !== products.find(p => p.id === item.productId)?.name && (
+                    <Typography variant="caption" sx={{ color: '#10b981', mt: 0.5, display: 'block', fontWeight: 500 }}>
+                      Obs: {item.description}
+                    </Typography>
+                  )}
                 </Grid>
                 <Grid size={{ xs: 4, md: 1 }}>
                   <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#94a3b8', fontWeight: 600 }}>CANT</Typography>
@@ -491,7 +526,7 @@ export default function QuotationForm({
                   size="small"
                   variant="text"
                   startIcon={item.showDetails ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                  onClick={() => updateItem(index, "showDetails" as any, !item.showDetails)}
+                  onClick={() => updateItem(index, "showDetails", !item.showDetails)}
                   sx={{ color: '#64748b', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', p: 0, '&:hover': { bgcolor: 'transparent', color: '#334155' } }}
                 >
                   Detalles Técnicos / SAT

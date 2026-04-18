@@ -110,7 +110,7 @@ const QuotationPDF = ({ q, company }: { q: Quotation; company: CompanyInfo | nul
       </View>
       {q.quotationItems.map((item, i) => (
         <View key={i} style={pdfStyles.tableRow}>
-          <Text style={[pdfStyles.cell, { width: "60%" }]}>{item.product?.name}</Text>
+          <Text style={[pdfStyles.cell, { width: "60%" }]}>{item.description || item.product?.name}</Text>
           <Text style={[pdfStyles.cell, { width: "10%", textAlign: "center" }]}>{item.quantity}</Text>
           <Text style={[pdfStyles.cell, { width: "15%", textAlign: "right" }]}>{item.unitPrice.toFixed(2)}</Text>
           <Text style={[pdfStyles.cell, { width: "15%", textAlign: "right" }]}>{item.totalPrice.toFixed(2)}</Text>
@@ -335,8 +335,7 @@ export default function QuotationDetailPage() {
             {q.quotationItems.map((item) => (
               <TableRow key={item.id}>
                 <TableCell>
-                  <Typography variant="body2" color="#1e293b" sx={{ fontWeight: 600 }}>{item.product?.name}</Typography>
-                  {item.description && <Typography variant="caption" color="text.secondary">{item.description}</Typography>}
+                  <Typography variant="body2" color="#1e293b" sx={{ fontWeight: 600 }}>{item.description || item.product?.name}</Typography>
                 </TableCell>
                 <TableCell align="center" sx={{ color: '#475569' }}>{item.quantity}</TableCell>
                 <TableCell align="right" sx={{ color: '#475569' }}>{item.unitPrice.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}</TableCell>
