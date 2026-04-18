@@ -296,7 +296,7 @@ export default function QuotationForm({
             Configuración de Precios
           </Typography>
         </Box>
-        <Grid container spacing={4} alignItems="flex-end">
+        <Grid container spacing={4} sx={{ alignItems: 'flex-end' }}>
           <Grid size={{ xs: 12, md: 8 }}>
             <FormControl fullWidth variant="outlined" size="small">
               <InputLabel sx={{ color: '#94a3b8' }}>Esquema de precios</InputLabel>
