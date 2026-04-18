@@ -134,7 +134,7 @@ export default function Navbar({ user }: NavbarProps) {
           <Divider />
           {[1, 2, 3].map((i) => (
             <MenuItem key={i} onClick={handleNotifClose} sx={{ py: 1.5, display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
-              <Typography variant="body2" fontWeight={600}>Nueva Cotización #{i}045</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>Nueva Cotización #{i}045</Typography>
               <Typography variant="caption" color="text.secondary">Hace 15 minutos</Typography>
             </MenuItem>
           ))}
@@ -187,7 +187,7 @@ export default function Navbar({ user }: NavbarProps) {
         >
           <Box sx={{ px: 2, py: 1.5 }}>
             <Typography variant="caption" color="text.secondary">MI CUENTA</Typography>
-            <Typography variant="body2" fontWeight={700} noWrap>{user.email}</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>{user.email}</Typography>
           </Box>
           <Divider />
           <MenuItem onClick={() => { handleProfileClose(); router.push("/dashboard/profile"); }} sx={{ gap: 1.5, py: 1.2 }}>
@@ -198,7 +198,7 @@ export default function Navbar({ user }: NavbarProps) {
           </MenuItem>
           <Divider />
           <MenuItem onClick={handleLogout} sx={{ gap: 1.5, py: 1.2, color: "error.main" }}>
-            <LogOut size={16} /> <Typography variant="body2" fontWeight={600}>Cerrar Sesión</Typography>
+            <LogOut size={16} /> <Typography variant="body2" sx={{ fontWeight: 600 }}>Cerrar Sesión</Typography>
           </MenuItem>
         </Menu>
       </Box>
