@@ -42,6 +42,49 @@ import { ImportedItemData } from "@/types/import-types";
 
 const IVA_PERCENTAGE = 0.16;
 
+/** Compact mobile input overrides */
+const mobileInput = {
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 1.5,
+  },
+  '@media (max-width: 600px)': {
+    '& .MuiOutlinedInput-root': {
+      fontSize: '0.8rem',
+    },
+    '& .MuiOutlinedInput-input': {
+      py: '6px',
+      px: '10px',
+    },
+    '& .MuiInputLabel-root': {
+      fontSize: '0.75rem',
+    },
+    '& .MuiSelect-select': {
+      py: '6px !important',
+      px: '10px !important',
+      fontSize: '0.8rem',
+    },
+  },
+};
+
+const mobileSelect = {
+  borderRadius: 1.5,
+  '@media (max-width: 600px)': {
+    fontSize: '0.8rem',
+    '& .MuiSelect-select': {
+      py: '6px !important',
+      px: '10px !important',
+    },
+  },
+};
+
+const mobileLabel = {
+  display: 'block',
+  mb: 0.5,
+  color: '#94a3b8',
+  fontWeight: 600,
+  fontSize: { xs: '0.6rem', md: '0.75rem' },
+};
+
 type PricingMode = "manual" | "individual_margin" | "global_margin";
 type TaxMode = "net" | "gross";
 
@@ -294,21 +337,21 @@ export default function QuotationForm({
   }
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 1000, mx: "auto", py: 6, px: 3 }}>
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 6 }}>
+    <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 1000, mx: "auto", py: { xs: 1.5, md: 6 }, px: { xs: 1, sm: 2, md: 3 } }}>
+      <Box sx={{ display: "flex", flexDirection: { xs: 'column', sm: 'row' }, justifyContent: "space-between", alignItems: { xs: 'flex-start', sm: 'flex-start' }, mb: { xs: 2, md: 6 }, gap: 0.5 }}>
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 700, color: '#1e293b', letterSpacing: '-0.02em', mb: 1 }}>
+          <Typography sx={{ fontWeight: 700, color: '#1e293b', letterSpacing: '-0.02em', mb: 0.5, fontSize: { xs: '1.1rem', sm: '1.4rem', md: '2rem' } }}>
             {title}
           </Typography>
-          <Typography sx={{ color: '#64748b', fontSize: '0.95rem' }}>
+          <Typography sx={{ color: '#64748b', fontSize: { xs: '0.75rem', md: '0.9rem' } }}>
             Documento de cotización comercial
           </Typography>
         </Box>
         <Button
           variant="text"
-          startIcon={<ArrowLeft size={18} strokeWidth={1.5} />}
+          startIcon={<ArrowLeft size={16} strokeWidth={1.5} />}
           onClick={() => router.back()}
-          sx={{ color: '#64748b', textTransform: 'none', fontWeight: 500, '&:hover': { bgcolor: '#f1f5f9' } }}
+          sx={{ color: '#64748b', textTransform: 'none', fontWeight: 500, fontSize: { xs: '0.75rem', md: '0.875rem' }, '&:hover': { bgcolor: '#f1f5f9' }, p: { xs: 0, sm: 1 }, minWidth: 0 }}
         >
           Regresar
         </Button>
@@ -316,26 +359,26 @@ export default function QuotationForm({
 
 
       {/* Pricing Config - Neutral Gray Style */}
-      <Paper variant="outlined" sx={{ mb: 6, p: 3, borderRadius: 2, border: '1px solid #e2e8f0', bgcolor: '#f8fafc' }}>
-        <Box sx={{ display: "flex", alignItems: "center", mb: 3, gap: 1 }}>
-          <Settings2 size={16} strokeWidth={2} color="#64748b" />
-          <Typography sx={{ color: '#475569', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+      <Paper variant="outlined" sx={{ mb: { xs: 2, md: 6 }, p: { xs: 1.5, md: 3 }, borderRadius: 2, border: '1px solid #e2e8f0', bgcolor: '#f8fafc' }}>
+        <Box sx={{ display: "flex", alignItems: "center", mb: { xs: 1.5, md: 3 }, gap: 1 }}>
+          <Settings2 size={14} strokeWidth={2} color="#64748b" />
+          <Typography sx={{ color: '#475569', fontWeight: 600, fontSize: { xs: '0.65rem', md: '0.75rem' }, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             Configuración de Precios
           </Typography>
         </Box>
-        <Grid container spacing={4} sx={{ alignItems: 'flex-end' }}>
+        <Grid container spacing={{ xs: 1.5, md: 4 }} sx={{ alignItems: 'flex-end' }}>
           <Grid size={{ xs: 12, md: 8 }}>
             <FormControl fullWidth variant="outlined" size="small">
-              <InputLabel sx={{ color: '#94a3b8' }}>Esquema de precios</InputLabel>
+              <InputLabel sx={{ color: '#94a3b8', '@media (max-width: 600px)': { fontSize: '0.75rem' } }}>Esquema de precios</InputLabel>
               <Select
                 value={pricingMode}
                 onChange={(e) => handleModeChange(e.target.value as PricingMode)}
                 label="Esquema de precios"
-                sx={{ bgcolor: 'white', borderRadius: 1.5 }}
+                sx={{ bgcolor: 'white', ...mobileSelect }}
               >
-                <MenuItem value="manual">Manual: Ingreso directo de precios</MenuItem>
-                <MenuItem value="individual_margin">Detallado: Basado en margen por item</MenuItem>
-                <MenuItem value="global_margin">Global: Margen único para toda la lista</MenuItem>
+                <MenuItem value="manual" sx={{ '@media (max-width: 600px)': { fontSize: '0.8rem', minHeight: 32 } }}>Manual: Precios directos</MenuItem>
+                <MenuItem value="individual_margin" sx={{ '@media (max-width: 600px)': { fontSize: '0.8rem', minHeight: 32 } }}>Detallado: Margen por item</MenuItem>
+                <MenuItem value="global_margin" sx={{ '@media (max-width: 600px)': { fontSize: '0.8rem', minHeight: 32 } }}>Global: Margen único</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -353,7 +396,7 @@ export default function QuotationForm({
                     endAdornment: <InputAdornment position="end"><Typography sx={{ fontSize: '0.8rem', color: '#94a3b8' }}>%</Typography></InputAdornment>,
                   }
                 }}
-                sx={{ bgcolor: 'white', borderRadius: 1.5 }}
+                sx={{ bgcolor: 'white', ...mobileInput }}
               />
             </Grid>
           )}
@@ -361,18 +404,18 @@ export default function QuotationForm({
       </Paper>
 
       {/* Main Fields */}
-      <Grid container spacing={3} sx={{ mb: 6 }}>
+      <Grid container spacing={{ xs: 1, md: 3 }} sx={{ mb: { xs: 2, md: 6 } }}>
         <Grid size={{ xs: 12, md: 6 }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
-            <User size={14} color="#64748b" />
-            <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Cliente</Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
+            <User size={12} color="#64748b" />
+            <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600, textTransform: 'uppercase', fontSize: { xs: '0.6rem', md: '0.75rem' } }}>Cliente</Typography>
           </Box>
           <FormControl fullWidth variant="outlined" size="small">
             <Select
               value={selectedCustomer}
               onChange={(e) => setSelectedCustomer(e.target.value)}
               required
-              sx={{ borderRadius: 1.5 }}
+              sx={mobileSelect}
             >
               <MenuItem value=""><em>Seleccione un cliente</em></MenuItem>
               {customers.map((c) => (
@@ -382,9 +425,9 @@ export default function QuotationForm({
           </FormControl>
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
-            <Calendar size={14} color="#64748b" />
-            <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Vencimiento</Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
+            <Calendar size={12} color="#64748b" />
+            <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600, textTransform: 'uppercase', fontSize: { xs: '0.6rem', md: '0.75rem' } }}>Vencimiento</Typography>
           </Box>
           <TextField
             fullWidth
@@ -395,23 +438,23 @@ export default function QuotationForm({
             slotProps={{
               inputLabel: { shrink: true }
             }}
-            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+            sx={mobileInput}
           />
         </Grid>
       </Grid>
 
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <FileText size={18} strokeWidth={1.5} color="#475569" />
-          <Typography sx={{ fontWeight: 600, color: '#334155' }}>Líneas de Detalle</Typography>
+      <Box sx={{ display: "flex", flexDirection: { xs: 'column', sm: 'row' }, justifyContent: "space-between", alignItems: { xs: 'stretch', sm: 'center' }, mb: { xs: 1.5, md: 3 }, gap: { xs: 1, sm: 0 } }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+          <FileText size={14} strokeWidth={1.5} color="#475569" />
+          <Typography sx={{ fontWeight: 600, color: '#334155', fontSize: { xs: '0.8rem', md: '1rem' } }}>Líneas de Detalle</Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ display: 'flex', gap: 1 }}>
           <PdfImporter onImport={handleImportPdf} products={products} />
           <Button
             variant="outlined"
-            startIcon={<Plus size={16} strokeWidth={2} />}
+            startIcon={<Plus size={14} strokeWidth={2} />}
             onClick={addItem}
-            sx={{ borderRadius: 1.5, textTransform: 'none', color: '#475569', borderColor: '#cbd5e1', '&:hover': { bgcolor: '#f8fafc', borderColor: '#94a3b8' } }}
+            sx={{ borderRadius: 1.5, textTransform: 'none', color: '#475569', borderColor: '#cbd5e1', '&:hover': { bgcolor: '#f8fafc', borderColor: '#94a3b8' }, flex: { xs: 1, sm: 'none' }, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 0.5, md: 1 } }}
           >
             Nuevo Item
           </Button>
@@ -419,29 +462,29 @@ export default function QuotationForm({
       </Box>
 
       {items.length === 0 ? (
-        <Paper variant="outlined" sx={{ py: 8, textAlign: "center", borderRadius: 2, borderStyle: "dashed", bgcolor: '#f8fafc', borderColor: '#e2e8f0' }}>
-          <Typography sx={{ color: '#94a3b8', fontSize: '0.9rem' }}>No hay productos agregados</Typography>
+        <Paper variant="outlined" sx={{ py: { xs: 4, md: 8 }, textAlign: "center", borderRadius: 2, borderStyle: "dashed", bgcolor: '#f8fafc', borderColor: '#e2e8f0' }}>
+          <Typography sx={{ color: '#94a3b8', fontSize: { xs: '0.8rem', md: '0.9rem' } }}>No hay productos agregados</Typography>
         </Paper>
       ) : (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 1.5, md: 2 } }}>
           {items.map((item, index) => (
-            <Box key={index} sx={{ p: 3, border: '1px solid #e2e8f0', borderRadius: 2, position: 'relative', '&:hover': { borderColor: '#cbd5e1' } }}>
+            <Box key={index} sx={{ p: { xs: 1.5, md: 3 }, border: '1px solid #e2e8f0', borderRadius: { xs: 1.5, md: 2 }, position: 'relative', '&:hover': { borderColor: '#cbd5e1' } }}>
               <IconButton
                 size="small"
                 onClick={() => removeItem(index)}
-                sx={{ position: "absolute", top: 8, right: 8, color: '#94a3b8', '&:hover': { color: '#ef4444', bgcolor: '#fef2f2' } }}
+                sx={{ position: "absolute", top: 4, right: 4, color: '#94a3b8', '&:hover': { color: '#ef4444', bgcolor: '#fef2f2' }, p: { xs: 0.3, md: 0.5 } }}
               >
-                <X size={16} />
+                <X size={14} />
               </IconButton>
               
-              <Grid container spacing={2} sx={{ alignItems: 'flex-end' }}>
+              <Grid container spacing={{ xs: 1, md: 2 }} sx={{ alignItems: 'flex-end' }}>
                 <Grid size={{ xs: 12, md: 4 }}>
-                  <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#94a3b8', fontWeight: 600 }}>PRODUCTO</Typography>
+                  <Typography variant="caption" sx={mobileLabel}>PRODUCTO</Typography>
                   <FormControl fullWidth size="small">
                     <Select
                       value={item.productId}
                       onChange={(e) => handleProductChange(index, e.target.value)}
-                      sx={{ borderRadius: 1.5 }}
+                      sx={mobileSelect}
                     >
                       {products.map((p) => (
                         <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
@@ -449,63 +492,63 @@ export default function QuotationForm({
                     </Select>
                   </FormControl>
                   {item.description && item.description !== products.find(p => p.id === item.productId)?.name && (
-                    <Typography variant="caption" sx={{ color: '#10b981', mt: 0.5, display: 'block', fontWeight: 500 }}>
-                      Obs: {item.description}
+                    <Typography variant="caption" sx={{ color: '#10b981', mt: 0.3, display: 'block', fontWeight: 500, fontSize: { xs: '0.65rem', md: '0.75rem' } }}>
+                      {item.description}
                     </Typography>
                   )}
                 </Grid>
                 <Grid size={{ xs: 4, md: 1 }}>
-                  <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#94a3b8', fontWeight: 600 }}>CANT</Typography>
+                  <Typography variant="caption" sx={mobileLabel}>CANT</Typography>
                   <TextField
                     fullWidth
                     size="small"
                     type="number"
                     value={item.quantity}
                     onChange={(e) => updateItem(index, "quantity", Number(e.target.value))}
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+                    sx={mobileInput}
                   />
                 </Grid>
-                <Grid size={{ xs: 8, md: 1.5 }}>
-                  <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#94a3b8', fontWeight: 600 }}>IMPUESTO</Typography>
+                <Grid size={{ xs: 4, md: 1.5 }}>
+                  <Typography variant="caption" sx={mobileLabel}>IMP.</Typography>
                   <Select
                     fullWidth
                     size="small"
                     value={item.taxMode}
                     onChange={(e) => updateItem(index, "taxMode", e.target.value as TaxMode)}
-                    sx={{ borderRadius: 1.5 }}
+                    sx={mobileSelect}
                   >
                     <MenuItem value="net">Neto</MenuItem>
                     <MenuItem value="gross">Bruto</MenuItem>
                   </Select>
                 </Grid>
                 {pricingMode !== "manual" && (
-                  <Grid size={{ xs: 6, md: 1.5 }}>
-                    <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#94a3b8', fontWeight: 600 }}>COSTO</Typography>
+                  <Grid size={{ xs: 4, md: 1.5 }}>
+                    <Typography variant="caption" sx={mobileLabel}>COSTO</Typography>
                     <TextField
                       fullWidth
                       size="small"
                       type="number"
                       value={item.cost}
                       onChange={(e) => updateItem(index, "cost", Number(e.target.value))}
-                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+                      sx={mobileInput}
                     />
                   </Grid>
                 )}
                 {pricingMode === "individual_margin" && (
-                  <Grid size={{ xs: 6, md: 1 }}>
-                    <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#94a3b8', fontWeight: 600 }}>% MARGEN</Typography>
+                  <Grid size={{ xs: 4, md: 1 }}>
+                    <Typography variant="caption" sx={mobileLabel}>%MRG</Typography>
                     <TextField
                       fullWidth
                       size="small"
                       type="number"
                       value={item.margin}
                       onChange={(e) => updateItem(index, "margin", Number(e.target.value))}
-                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+                      sx={mobileInput}
                     />
                   </Grid>
                 )}
-                <Grid size={{ xs: 12, md: 2 }}>
-                  <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#94a3b8', fontWeight: 600 }}>PRECIO UNIT.</Typography>
+                <Grid size={{ xs: 4, md: 2 }}>
+                  <Typography variant="caption" sx={mobileLabel}>P.UNIT</Typography>
                   <TextField
                     fullWidth
                     size="small"
@@ -513,34 +556,34 @@ export default function QuotationForm({
                     value={pricingMode === "manual" ? item.typedPrice : item.typedPrice.toFixed(2)}
                     onChange={(e) => pricingMode === "manual" && updateItem(index, "typedPrice", Number(e.target.value))}
                     slotProps={{ input: { readOnly: pricingMode !== "manual" } }}
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: pricingMode !== 'manual' ? '#f8fafc' : 'white' } }}
+                    sx={{ ...mobileInput, '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: pricingMode !== 'manual' ? '#f8fafc' : 'white' } }}
                   />
                 </Grid>
-                <Grid size={{ xs: 12, md: 1 }} sx={{ textAlign: "right", pb: 1 }}>
-                  <Typography sx={{ fontWeight: 700, color: '#1e293b' }}>{formatCurrency(item.totalPrice)}</Typography>
+                <Grid size={{ xs: 12, md: 1 }} sx={{ textAlign: "right", pb: { xs: 0, md: 1 } }}>
+                  <Typography sx={{ fontWeight: 700, color: '#1e293b', fontSize: { xs: '0.85rem', md: '1rem' } }}>{formatCurrency(item.totalPrice)}</Typography>
                 </Grid>
               </Grid>
 
-              <Box sx={{ mt: 2 }}>
+              <Box sx={{ mt: { xs: 1, md: 2 } }}>
                 <Button
                   size="small"
                   variant="text"
-                  startIcon={item.showDetails ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  startIcon={item.showDetails ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                   onClick={() => updateItem(index, "showDetails", !item.showDetails)}
-                  sx={{ color: '#64748b', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', p: 0, '&:hover': { bgcolor: 'transparent', color: '#334155' } }}
+                  sx={{ color: '#64748b', fontSize: { xs: '0.6rem', md: '0.7rem' }, fontWeight: 600, textTransform: 'uppercase', p: 0, '&:hover': { bgcolor: 'transparent', color: '#334155' } }}
                 >
-                  Detalles Técnicos / SAT
+                  Detalles SAT
                 </Button>
                 <Collapse in={item.showDetails}>
-                  <Grid container spacing={2} sx={{ mt: 1 }}>
-                    <Grid size={{ xs: 12, md: 4 }}>
-                      <TextField fullWidth size="small" label="Clave SAT" value={item.satProductKey} onChange={(e) => updateItem(index, "satProductKey", e.target.value)} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }} />
+                  <Grid container spacing={{ xs: 1, md: 2 }} sx={{ mt: 0.5 }}>
+                    <Grid size={{ xs: 6, md: 4 }}>
+                      <TextField fullWidth size="small" label="Clave SAT" value={item.satProductKey} onChange={(e) => updateItem(index, "satProductKey", e.target.value)} sx={mobileInput} />
+                    </Grid>
+                    <Grid size={{ xs: 6, md: 4 }}>
+                      <TextField fullWidth size="small" label="Unidad SAT" value={item.satUnitKey} onChange={(e) => updateItem(index, "satUnitKey", e.target.value)} sx={mobileInput} />
                     </Grid>
                     <Grid size={{ xs: 12, md: 4 }}>
-                      <TextField fullWidth size="small" label="Unidad SAT" value={item.satUnitKey} onChange={(e) => updateItem(index, "satUnitKey", e.target.value)} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }} />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 4 }}>
-                      <TextField fullWidth size="small" label="Descripción personalizada" value={item.description} onChange={(e) => updateItem(index, "description", e.target.value)} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }} />
+                      <TextField fullWidth size="small" label="Descripción" value={item.description} onChange={(e) => updateItem(index, "description", e.target.value)} sx={mobileInput} />
                     </Grid>
                   </Grid>
                 </Collapse>
@@ -550,45 +593,45 @@ export default function QuotationForm({
         </Box>
       )}
 
-      <Box sx={{ mt: 6 }}>
-        <Typography variant="caption" sx={{ display: 'block', mb: 1, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Observaciones y Condiciones</Typography>
+      <Box sx={{ mt: { xs: 3, md: 6 } }}>
+        <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: { xs: '0.6rem', md: '0.75rem' } }}>Observaciones y Condiciones</Typography>
         <TextField
           fullWidth
           multiline
-          rows={3}
-          placeholder="Escriba aquí notas adicionales para el cliente..."
+          rows={2}
+          placeholder="Notas adicionales para el cliente..."
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+          sx={{ ...mobileInput, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
         />
       </Box>
 
       {/* Summary Section - Professional Style */}
-      <Box sx={{ mt: 8, p: 4, border: '1px solid #e2e8f0', borderRadius: 3, bgcolor: '#f8fafc' }}>
-        <Grid container spacing={4} sx={{ alignItems: 'center' }}>
+      <Box sx={{ mt: { xs: 2.5, md: 8 }, p: { xs: 1.5, md: 4 }, border: '1px solid #e2e8f0', borderRadius: { xs: 2, md: 3 }, bgcolor: '#f8fafc' }}>
+        <Grid container spacing={{ xs: 1.5, md: 4 }} sx={{ alignItems: 'center' }}>
           <Grid size={{ xs: 12, md: 6 }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography sx={{ color: '#64748b', fontSize: '0.9rem' }}>Subtotal Neto</Typography>
-                <Typography sx={{ fontWeight: 500 }}>{formatCurrency(totalWithoutIVA)}</Typography>
+                <Typography sx={{ color: '#64748b', fontSize: { xs: '0.75rem', md: '0.9rem' } }}>Subtotal Neto</Typography>
+                <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.8rem', md: '1rem' } }}>{formatCurrency(totalWithoutIVA)}</Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography sx={{ color: '#64748b', fontSize: '0.9rem' }}>Impuestos (16%)</Typography>
-                <Typography sx={{ fontWeight: 500 }}>{formatCurrency(iva)}</Typography>
+                <Typography sx={{ color: '#64748b', fontSize: { xs: '0.75rem', md: '0.9rem' } }}>IVA (16%)</Typography>
+                <Typography sx={{ fontWeight: 500, fontSize: { xs: '0.8rem', md: '1rem' } }}>{formatCurrency(iva)}</Typography>
               </Box>
-              <Divider sx={{ my: 1 }} />
+              <Divider sx={{ my: 0.5 }} />
               <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography sx={{ color: '#1e293b', fontWeight: 700, fontSize: '1.1rem' }}>Total General</Typography>
-                <Typography sx={{ color: '#0f172a', fontWeight: 800, fontSize: '1.25rem' }}>{formatCurrency(totalWithIVA)}</Typography>
+                <Typography sx={{ color: '#1e293b', fontWeight: 700, fontSize: { xs: '0.85rem', md: '1.1rem' } }}>Total</Typography>
+                <Typography sx={{ color: '#0f172a', fontWeight: 800, fontSize: { xs: '0.95rem', md: '1.25rem' } }}>{formatCurrency(totalWithIVA)}</Typography>
               </Box>
             </Box>
           </Grid>
-          <Grid size={{ xs: 12, md: 6 }} sx={{ textAlign: 'right' }}>
-            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+          <Grid size={{ xs: 12, md: 6 }} sx={{ textAlign: { xs: 'center', md: 'right' } }}>
+            <Box sx={{ display: 'flex', gap: 1, justifyContent: { xs: 'stretch', md: 'flex-end' }, flexDirection: { xs: 'column', sm: 'row' } }}>
               <Button
                 variant="outlined"
                 onClick={() => router.back()}
-                sx={{ borderRadius: 1.5, px: 4, py: 1.2, textTransform: 'none', borderColor: '#cbd5e1', color: '#475569' }}
+                sx={{ borderRadius: 1.5, px: { xs: 2, md: 4 }, py: { xs: 0.8, md: 1.2 }, textTransform: 'none', borderColor: '#cbd5e1', color: '#475569', fontSize: { xs: '0.8rem', md: '0.875rem' } }}
               >
                 Descartar
               </Button>
@@ -596,8 +639,8 @@ export default function QuotationForm({
                 type="submit"
                 variant="contained"
                 disabled={isSubmitting}
-                startIcon={isSubmitting ? <CircularProgress size={16} color="inherit" /> : <Save size={18} strokeWidth={1.5} />}
-                sx={{ borderRadius: 1.5, px: 4, py: 1.2, textTransform: 'none', bgcolor: '#334155', '&:hover': { bgcolor: '#1e293b' }, boxShadow: 'none' }}
+                startIcon={isSubmitting ? <CircularProgress size={14} color="inherit" /> : <Save size={16} strokeWidth={1.5} />}
+                sx={{ borderRadius: 1.5, px: { xs: 2, md: 4 }, py: { xs: 0.8, md: 1.2 }, textTransform: 'none', bgcolor: '#334155', '&:hover': { bgcolor: '#1e293b' }, boxShadow: 'none', fontSize: { xs: '0.8rem', md: '0.875rem' } }}
               >
                 {isSubmitting ? "Guardando..." : submitLabel}
               </Button>

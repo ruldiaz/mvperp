@@ -22,6 +22,7 @@ import {
   Settings,
   ChevronDown,
   Search,
+  Menu as MenuIcon,
 } from "lucide-react";
 
 export interface User {
@@ -32,9 +33,10 @@ export interface User {
 
 interface NavbarProps {
   user: User;
+  onToggleSidebar: () => void;
 }
 
-export default function Navbar({ user }: NavbarProps) {
+export default function Navbar({ user, onToggleSidebar }: NavbarProps) {
   const router = useRouter();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [notifAnchorEl, setNotifAnchorEl] = useState<null | HTMLElement>(null);
@@ -76,23 +78,31 @@ export default function Navbar({ user }: NavbarProps) {
       sx={{
         bgcolor: "white",
         borderBottom: "1px solid #e2e8f0",
-        px: 4,
-        py: 2,
+        px: { xs: 2, md: 4 },
+        py: { xs: 1.5, md: 2 },
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
         position: "sticky",
         top: 0,
-        zIndex: 10,
+        zIndex: 30,
       }}
     >
-      <Box>
-        <Typography variant="h6" sx={{ fontWeight: 700, color: "#1e293b", lineHeight: 1.2 }}>
-          Panel de Control
-        </Typography>
-        <Typography variant="caption" sx={{ color: "#64748b", fontWeight: 500 }}>
-          Resumen operativo del día
-        </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        <IconButton
+          onClick={onToggleSidebar}
+          sx={{ color: '#475569', '&:hover': { bgcolor: '#f1f5f9' } }}
+        >
+          <MenuIcon size={22} strokeWidth={1.5} />
+        </IconButton>
+        <Box>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: "#1e293b", lineHeight: 1.2, fontSize: { xs: '0.9rem', md: '1.25rem' } }}>
+            Panel de Control
+          </Typography>
+          <Typography variant="caption" sx={{ color: "#64748b", fontWeight: 500, display: { xs: 'none', sm: 'block' } }}>
+            Resumen operativo del día
+          </Typography>
+        </Box>
       </Box>
 
       <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
