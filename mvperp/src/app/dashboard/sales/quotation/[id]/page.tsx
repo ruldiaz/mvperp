@@ -208,7 +208,7 @@ export default function QuotationDetailPage() {
   };
 
   if (loading) return (
-    <Box display="flex" justifyContent="center" py={10}><CircularProgress size={30} sx={{ color: '#94a3b8' }} /></Box>
+    <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}><CircularProgress size={30} sx={{ color: '#94a3b8' }} /></Box>
   );
 
   if (!q) return null;
@@ -274,26 +274,26 @@ export default function QuotationDetailPage() {
         </Stack>
       </Box>
 
-      <Grid container spacing={4} mb={6}>
+      <Grid container spacing={4} sx={{ mb: 6 }}>
         <Grid size={{ xs: 12, md: 6 }}>
           <Card variant="outlined" sx={{ borderRadius: 2, borderColor: '#e2e8f0', height: '100%' }}>
             <CardContent sx={{ p: 3 }}>
-              <Box display="flex" alignItems="center" gap={1} mb={2.5}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2.5 }}>
                 <Building2 size={16} color="#64748b" />
                 <Typography sx={{ color: '#64748b', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Información Comercial</Typography>
               </Box>
               <Stack spacing={2}>
-                <Box display="flex" justifyContent="space-between">
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                   <Typography variant="body2" color="text.secondary">Fecha de emisión</Typography>
-                  <Typography variant="body2" fontWeight={600}>{new Date(q.date).toLocaleDateString()}</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{new Date(q.date).toLocaleDateString()}</Typography>
                 </Box>
-                <Box display="flex" justifyContent="space-between">
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                   <Typography variant="body2" color="text.secondary">Vencimiento</Typography>
-                  <Typography variant="body2" fontWeight={600}>{q.expiryDate ? new Date(q.expiryDate).toLocaleDateString() : 'No aplica'}</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{q.expiryDate ? new Date(q.expiryDate).toLocaleDateString() : 'No aplica'}</Typography>
                 </Box>
-                <Box display="flex" justifyContent="space-between">
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                   <Typography variant="body2" color="text.secondary">Referencia interna</Typography>
-                  <Typography variant="body2" fontWeight={600}>{q.id?.slice(0, 12)}</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{q.id?.slice(0, 12)}</Typography>
                 </Box>
               </Stack>
             </CardContent>
@@ -302,16 +302,16 @@ export default function QuotationDetailPage() {
         <Grid size={{ xs: 12, md: 6 }}>
           <Card variant="outlined" sx={{ borderRadius: 2, borderColor: '#e2e8f0', height: '100%' }}>
             <CardContent sx={{ p: 3 }}>
-              <Box display="flex" alignItems="center" gap={1} mb={2.5}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2.5 }}>
                 <User size={16} color="#64748b" />
                 <Typography sx={{ color: '#64748b', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Cliente</Typography>
               </Box>
-              <Box display="flex" alignItems="center" gap={2}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Box sx={{ width: 44, height: 44, borderRadius: 1.5, bgcolor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', fontWeight: 700 }}>
                   {q.customer?.name?.[0]}
                 </Box>
                 <Box>
-                  <Typography variant="subtitle1" fontWeight={700} sx={{ color: '#1e293b' }}>{q.customer?.name}</Typography>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#1e293b' }}>{q.customer?.name}</Typography>
                   <Typography variant="body2" color="text.secondary">{q.customer?.email}</Typography>
                   <Typography variant="caption" sx={{ color: '#94a3b8' }}>RFC: {q.customer?.rfc}</Typography>
                 </Box>
@@ -335,7 +335,7 @@ export default function QuotationDetailPage() {
             {q.quotationItems.map((item) => (
               <TableRow key={item.id}>
                 <TableCell>
-                  <Typography variant="body2" fontWeight={600} color="#1e293b">{item.product?.name}</Typography>
+                  <Typography variant="body2" color="#1e293b" sx={{ fontWeight: 600 }}>{item.product?.name}</Typography>
                   {item.description && <Typography variant="caption" color="text.secondary">{item.description}</Typography>}
                 </TableCell>
                 <TableCell align="center" sx={{ color: '#475569' }}>{item.quantity}</TableCell>
@@ -351,7 +351,7 @@ export default function QuotationDetailPage() {
         <Grid size={{ xs: 12, md: 7 }}>
           {q.notes && (
             <Box>
-              <Box display="flex" alignItems="center" gap={1} mb={2}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                 <MessageSquare size={16} color="#64748b" />
                 <Typography sx={{ color: '#64748b', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase' }}>Notas y Observaciones</Typography>
               </Box>
@@ -364,16 +364,16 @@ export default function QuotationDetailPage() {
         <Grid size={{ xs: 12, md: 5 }}>
           <Box sx={{ p: 3, borderRadius: 2, bgcolor: '#f8fafc', border: '1px solid #e2e8f0' }}>
             <Stack spacing={2}>
-              <Box display="flex" justifyContent="space-between">
+              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                 <Typography variant="body2" color="text.secondary">Subtotal Neto</Typography>
-                <Typography variant="body2" fontWeight={600}>{q.totalAmount.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>{q.totalAmount.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}</Typography>
               </Box>
-              <Box display="flex" justifyContent="space-between">
+              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                 <Typography variant="body2" color="text.secondary">IVA (16%)</Typography>
-                <Typography variant="body2" fontWeight={600}>{(q.totalAmount * 0.16).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>{(q.totalAmount * 0.16).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}</Typography>
               </Box>
               <Divider />
-              <Box display="flex" justifyContent="space-between" alignItems="center">
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography sx={{ color: '#0f172a', fontWeight: 700 }}>Total General</Typography>
                 <Typography variant="h6" sx={{ color: '#0f172a', fontWeight: 800 }}>
                   {(q.totalAmount * 1.16).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}
