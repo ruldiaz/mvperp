@@ -180,13 +180,13 @@ export default function CreateSupplier() {
                 <TextField
                   fullWidth size="small" label="Teléfono" name="phone"
                   value={form.phone} onChange={handleChange}
-                  slotProps={{ input: { startAdornment: <InputAdornment position="start"><Phone size={14} /></InputAdornment> } }}
+                  slotProps={{ input: { startAdornment: <InputAdornment position="start"><Phone size={18} color="#64748b" /></InputAdornment> } }}
                   sx={{ "& .MuiOutlinedInput-root": { borderRadius: 1.5 } }}
                 />
                 <TextField
                   fullWidth size="small" label="Correo electrónico" name="email" type="email"
                   value={form.email} onChange={handleChange}
-                  slotProps={{ input: { startAdornment: <InputAdornment position="start"><Mail size={14} /></InputAdornment> } }}
+                  slotProps={{ input: { startAdornment: <InputAdornment position="start"><Mail size={18} color="#64748b" /></InputAdornment> } }}
                   sx={{ "& .MuiOutlinedInput-root": { borderRadius: 1.5 } }}
                   placeholder="proveedor@empresa.com"
                 />

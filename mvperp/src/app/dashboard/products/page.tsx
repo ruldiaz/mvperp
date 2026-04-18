@@ -234,7 +234,7 @@ export default function Products() {
             input: {
               startAdornment: (
                 <InputAdornment position="start">
-                  <Search size={18} color="#94a3b8" />
+                  <Search size={18} color="#64748b" />
                 </InputAdornment>
               ),
             }

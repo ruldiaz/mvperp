@@ -120,26 +120,26 @@ export default function Purchases() {
         bg: "#dcfce7",
         color: "#166534",
         label: "Completada",
-        icon: <CheckCircle2 size={12} strokeWidth={2.5} />
+        icon: <CheckCircle2 size={18} color="#64748b" />
       },
       pending: {
         bg: "#fef3c7",
         color: "#92400e",
         label: "Pendiente",
-        icon: <Clock size={12} strokeWidth={2.5} />
+        icon: <Clock size={18} color="#64748b" />
       },
       cancelled: {
         bg: "#fee2e2",
         color: "#991b1b",
         label: "Cancelada",
-        icon: <XCircle size={12} strokeWidth={2.5} />
+        icon: <XCircle size={18} color="#64748b" />
       }
     };
     const selected = config[status as keyof typeof config] || {
       bg: "#f1f5f9",
       color: "#475569",
       label: status?.toUpperCase() || "Desconocido",
-      icon: <FileText size={12} strokeWidth={2.5} />
+      icon: <FileText size={18} color="#64748b" />
     };
 
     return (
@@ -223,7 +223,7 @@ export default function Purchases() {
             input: {
               startAdornment: (
                 <InputAdornment position="start">
-                  <Search size={18} color="#94a3b8" />
+                  <Search size={18} color="#64748b" />
                 </InputAdornment>
               ),
             }
@@ -281,14 +281,14 @@ export default function Purchases() {
                     {formatCurrency(purchase.debt || 0)}
                   </TableCell>
                   <TableCell align="right">
-                    <ChevronRight size={18} color="#cbd5e1" />
+                    <ChevronRight size={18} color="#64748b" />
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
                 <TableCell colSpan={8} align="center" sx={{ py: 10 }}>
-                   <Box sx={{ color: '#cbd5e1', mb: 2 }}><ShoppingBag size={48} strokeWidth={1} /></Box>
+                   <Box sx={{ color: '#64748b', mb: 2 }}><ShoppingBag size={18} strokeWidth={1} color="#64748b" /></Box>
                    <Typography sx={{ color: '#94a3b8', fontSize: '0.9rem' }}>
                     {searchTerm ? `No se encontraron compras para "${searchTerm}"` : "Aún no hay compras registradas"}
                   </Typography>

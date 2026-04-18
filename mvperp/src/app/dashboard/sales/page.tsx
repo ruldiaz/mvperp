@@ -245,7 +245,7 @@ export default function Sales() {
             input: {
               startAdornment: (
                 <InputAdornment position="start">
-                  <Search size={18} color="#94a3b8" />
+                  <Search size={18} color="#64748b" />
                 </InputAdornment>
               ),
             }
@@ -271,7 +271,7 @@ export default function Sales() {
       </Paper>
 
       {error && (
-        <Alert severity="error" icon={<AlertTriangle size={18} />} sx={{ mb: 4, borderRadius: 2 }}>
+        <Alert severity="error" icon={<AlertTriangle size={18} color="#64748b" />} sx={{ mb: 4, borderRadius: 2 }}>
           {error}
         </Alert>
       )}
@@ -345,18 +345,18 @@ export default function Sales() {
                   <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                     <Stack spacing={0.5} sx={{ flexDirection: "row", justifyContent: "flex-end" }}>
                       <Tooltip title="Ver detalles">
-                        <IconButton size="small" component={Link} href={`/dashboard/sales/${sale.id}`} sx={{ color: '#94a3b8', '&:hover': { color: '#334155' } }}>
-                          <Eye size={18} />
+                        <IconButton size="small" component={Link} href={`/dashboard/sales/${sale.id}`} sx={{ color: '#64748b', '&:hover': { color: '#334155' } }}>
+                          <Eye size={18} color="#64748b" />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Facturar">
-                        <IconButton size="small" component={Link} href={`/dashboard/invoices/create?saleId=${sale.id}`} sx={{ color: '#059669', '&:hover': { color: '#047857' } }}>
-                          <FileCheck size={18} />
+                        <IconButton size="small" component={Link} href={`/dashboard/invoices/create?saleId=${sale.id}`} sx={{ color: '#64748b', '&:hover': { color: '#047857' } }}>
+                          <FileCheck size={18} color="#64748b" />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Borrar">
-                        <IconButton size="small" onClick={() => handleDelete(sale.id!)} sx={{ color: '#94a3b8', '&:hover': { color: '#ef4444' } }}>
-                          <Trash2 size={18} />
+                        <IconButton size="small" onClick={() => handleDelete(sale.id!)} sx={{ color: '#64748b', '&:hover': { color: '#ef4444' } }}>
+                          <Trash2 size={18} color="#64748b" />
                         </IconButton>
                       </Tooltip>
                     </Stack>
@@ -369,7 +369,7 @@ export default function Sales() {
               <TableRow>
                 <TableCell colSpan={7} align="center" sx={{ py: 10 }}>
                   <Box sx={{ textAlign: 'center' }}>
-                    <Package size={40} color="#cbd5e1" style={{ marginBottom: 16 }} />
+                    <Package size={18} color="#64748b" style={{ marginBottom: 16 }} />
                     <Typography variant="h6" sx={{ color: '#1e293b', fontWeight: 600, mb: 1 }}>No se encontraron ventas</Typography>
                     <Typography sx={{ color: '#64748b', mb: 3 }}>Aún no hay registros que mostrar.</Typography>
                     <Button

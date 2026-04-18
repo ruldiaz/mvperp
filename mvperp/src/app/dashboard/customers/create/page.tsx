@@ -107,7 +107,7 @@ export default function CreateCustomer() {
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", mb: 4, flexWrap: "wrap", gap: 3 }}>
         <Box>
           <Button
-            startIcon={<ArrowLeft size={16} />}
+            startIcon={<ArrowLeft size={18} color="#64748b" />}
             onClick={() => router.back()}
             sx={{ color: '#64748b', mb: 1.5, p: 0, '&:hover': { bgcolor: 'transparent', color: '#1e293b' }, textTransform: 'none' }}
           >
@@ -148,7 +148,7 @@ export default function CreateCustomer() {
           <Paper variant="outlined" sx={{ p: 4, borderRadius: 3, borderColor: '#e2e8f0' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
               <Box sx={{ p: 1, bgcolor: '#f1f5f9', borderRadius: 1.5, display: 'flex' }}>
-                <User size={18} color="#475569" strokeWidth={1.5} />
+                <User size={18} color="#64748b" strokeWidth={1.5} />
               </Box>
               <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e293b' }}>Información Básica</Typography>
             </Box>
@@ -222,7 +222,7 @@ export default function CreateCustomer() {
           <Paper variant="outlined" sx={{ p: 4, borderRadius: 3, borderColor: '#e2e8f0', height: '100%' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
               <Box sx={{ p: 1, bgcolor: '#f1f5f9', borderRadius: 1.5, display: 'flex' }}>
-                <CreditCard size={18} color="#475569" strokeWidth={1.5} />
+                <CreditCard size={18} color="#64748b" strokeWidth={1.5} />
               </Box>
               <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e293b' }}>Configuración Fiscal</Typography>
             </Box>
@@ -272,7 +272,7 @@ export default function CreateCustomer() {
           <Paper variant="outlined" sx={{ p: 4, borderRadius: 3, borderColor: '#e2e8f0', height: '100%' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
               <Box sx={{ p: 1, bgcolor: '#f1f5f9', borderRadius: 1.5, display: 'flex' }}>
-                <Building2 size={18} color="#475569" strokeWidth={1.5} />
+                <Building2 size={18} color="#64748b" strokeWidth={1.5} />
               </Box>
               <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e293b' }}>Dirección de Contacto</Typography>
             </Box>
@@ -296,7 +296,7 @@ export default function CreateCustomer() {
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Box sx={{ p: 1, bgcolor: '#f1f5f9', borderRadius: 1.5, display: 'flex' }}>
-                  <MapPin size={18} color="#475569" strokeWidth={1.5} />
+                  <MapPin size={18} color="#64748b" strokeWidth={1.5} />
                 </Box>
                 <Box>
                   <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e293b' }}>Domicilio Fiscal Completo</Typography>
@@ -305,7 +305,7 @@ export default function CreateCustomer() {
               </Box>
               <Button 
                 onClick={() => setShowFiscalInfo(!showFiscalInfo)}
-                endIcon={showFiscalInfo ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                endIcon={showFiscalInfo ? <ChevronUp size={18} color="#64748b" /> : <ChevronDown size={18} color="#64748b" />}
                 sx={{ textTransform: 'none', color: '#64748b', fontWeight: 600 }}
               >
                 {showFiscalInfo ? 'Ocultar' : 'Configurar'}

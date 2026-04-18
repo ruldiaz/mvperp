@@ -358,7 +358,7 @@ export default function CreateSale() {
       </Box>
 
       {error && (
-        <Alert severity="error" icon={<AlertTriangle size={18} />} sx={{ mb: 4, borderRadius: 2 }}>
+        <Alert severity="error" icon={<AlertTriangle size={18} color="#64748b" />} sx={{ mb: 4, borderRadius: 2 }}>
           {error}
         </Alert>
       )}
@@ -425,7 +425,7 @@ export default function CreateSale() {
                   onChange={(e) => setCustomerSearch(e.target.value)}
                   slotProps={{
                     input: {
-                      startAdornment: <InputAdornment position="start"><Search size={18} color="#94a3b8" /></InputAdornment>,
+                      startAdornment: <InputAdornment position="start"><Search size={18} color="#64748b" /></InputAdornment>,
                       sx: { borderRadius: 1.5, bgcolor: '#f8fafc' }
                     }
                   }}
@@ -452,7 +452,7 @@ export default function CreateSale() {
                 <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155' }}>
                   {selectedCustomerData.name} <Box component="span" sx={{ color: '#94a3b8', ml: 1, fontWeight: 400 }}>{selectedCustomerData.rfc || "Sin RFC"}</Box>
                 </Typography>
-                <IconButton size="small" onClick={() => setSelectedCustomer("")} sx={{ color: '#94a3b8' }}><X size={14} /></IconButton>
+                <IconButton size="small" onClick={() => setSelectedCustomer("")} sx={{ color: '#64748b' }}><X size={18} color="#64748b" /></IconButton>
               </Box>
             )}
           </Paper>
@@ -570,7 +570,7 @@ export default function CreateSale() {
                     </TableCell>
                     <TableCell sx={{ py: 1.5 }}>
                       <IconButton size="small" onClick={() => removeItem(index)} sx={{ color: '#cbd5e1', '&:hover': { color: '#ef4444' } }}>
-                        <Trash2 size={18} />
+                        <Trash2 size={18} color="#64748b" />
                       </IconButton>
                     </TableCell>
                   </TableRow>
@@ -581,7 +581,7 @@ export default function CreateSale() {
                             variant="text"
                             size="small"
                             onClick={() => updateItem(index, 'showDetails', !item.showDetails)}
-                            startIcon={item.showDetails ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                            startIcon={item.showDetails ? <ChevronUp size={18} color="#64748b" /> : <ChevronDown size={18} color="#64748b" />}
                             sx={{ color: '#94a3b8', fontSize: '0.65rem', textTransform: 'uppercase', fontWeight: 700, p: 0 }}
                           >
                              Detalles SAT / Extra
@@ -602,7 +602,7 @@ export default function CreateSale() {
             {items.length === 0 && (
               <TableRow>
                 <TableCell colSpan={10} align="center" sx={{ py: 6 }}>
-                   <Box sx={{ color: '#cbd5e1', mb: 1 }}><ShoppingBag size={40} strokeWidth={1} /></Box>
+                   <Box sx={{ color: '#64748b', mb: 1 }}><ShoppingBag size={18} strokeWidth={1} color="#64748b" /></Box>
                    <Typography sx={{ color: '#94a3b8', fontSize: '0.875rem' }}>No hay productos agregados a la venta</Typography>
                 </TableCell>
               </TableRow>

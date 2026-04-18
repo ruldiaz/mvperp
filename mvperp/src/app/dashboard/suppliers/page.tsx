@@ -150,7 +150,7 @@ export default function Suppliers() {
           variant="contained"
           component={Link}
           href="/dashboard/suppliers/create"
-          startIcon={<Plus size={18} />}
+          startIcon={<Plus size={18} color="#ffffff" />}
           sx={{
             bgcolor: '#334155',
             '&:hover': { bgcolor: '#1e293b' },
@@ -179,7 +179,7 @@ export default function Suppliers() {
               sx={{ bgcolor: 'white', borderRadius: 2 }}
               startAdornment={
                 <InputAdornment position="start">
-                  <Search size={16} color="#94a3b8" />
+                  <Search size={18} color="#64748b" />
                 </InputAdornment>
               }
             />
@@ -225,7 +225,7 @@ export default function Suppliers() {
               <TableRow>
                 <TableCell colSpan={6} align="center" sx={{ py: 10 }}>
                   <Stack sx={{ alignItems: 'center', opacity: 0.5 }} spacing={2}>
-                    <Building2 size={48} strokeWidth={1} />
+                    <Building2 size={18} color="#64748b" />
                     <Typography variant="body1">No se encontraron proveedores</Typography>
                   </Stack>
                 </TableCell>
@@ -241,7 +241,7 @@ export default function Suppliers() {
                   <TableCell>
                     <Stack sx={{ alignItems: 'center' }} direction="row" spacing={2}>
                       <Avatar sx={{ bgcolor: '#f1f5f9', color: '#475569', borderRadius: 2, width: 40, height: 40 }}>
-                        <Building2 size={20} />
+                        <Building2 size={18} color="#64748b" />
                       </Avatar>
                       <Box>
                         <Typography sx={{ fontWeight: 600, color: '#1e293b', lineHeight: 1.2 }}>
@@ -263,7 +263,7 @@ export default function Suppliers() {
                   <TableCell>
                     {supplier.phone ? (
                        <Stack sx={{ alignItems: 'center', color: '#64748b' }} direction="row" spacing={1}>
-                        <Phone size={14} />
+                        <Phone size={18} color="#64748b" />
                         <Typography variant="body2">{supplier.phone}</Typography>
                       </Stack>
                     ) : '-'}
@@ -276,7 +276,7 @@ export default function Suppliers() {
                   <TableCell>
                     {supplier.lastPurchase ? (
                       <Stack sx={{ alignItems: 'center', color: '#64748b' }} direction="row" spacing={1}>
-                        <Calendar size={14} />
+                        <Calendar size={18} color="#64748b" />
                         <Typography variant="body2">{formatDate(supplier.lastPurchase)}</Typography>
                       </Stack>
                     ) : '-'}

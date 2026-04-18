@@ -1,9 +1,58 @@
-// app/dashboard/invoices/page.tsx
+// src/app/dashboard/invoices/page.tsx
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Invoice } from "@/types/invoice";
+import { toast } from "react-hot-toast";
+import {
+  Box,
+  Typography,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Button,
+  IconButton,
+  InputAdornment,
+  Stack,
+  CircularProgress,
+  Pagination,
+  Grid,
+  Tooltip,
+  Avatar,
+  Chip,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Fade,
+  Divider,
+  TextField
+} from "@mui/material";
+import {
+  Search,
+  Plus,
+  Eye,
+  FileText,
+  Calendar,
+  User,
+  Filter,
+  ChevronDown,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  TrendingUp,
+  CreditCard,
+  FileDigit,
+  Download,
+  MoreVertical,
+  History
+} from "lucide-react";
 
 interface PaginationInfo {
   page: number;
@@ -15,663 +64,375 @@ interface PaginationInfo {
 export default function Invoices() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo>({
-    page: 1,
-    limit: 10,
-    totalCount: 0,
-    totalPages: 0,
+    page: 1, limit: 10, totalCount: 0, totalPages: 0,
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
-  const fetchInvoices = useCallback(
-    async (page = 1, search = "") => {
-      try {
-        setLoading(true);
-        const params = new URLSearchParams({
-          page: page.toString(),
-          limit: pagination.limit.toString(),
-          ...(search && { search }),
-        });
+  // Menu State
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const openMenu = Boolean(anchorEl);
 
-        const res = await fetch(`/api/invoices?${params}`, {
-          credentials: "include",
-        });
+  const fetchInvoices = useCallback(async (page = 1, search = "") => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: pagination.limit.toString(),
+        ...(search && { search }),
+      });
 
-        if (!res.ok) throw new Error("Error al cargar las facturas");
+      const res = await fetch(`/api/invoices?${params}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Error al cargar las facturas");
 
-        const data = await res.json();
-        setInvoices(data.invoices);
-        setPagination(data.pagination);
-        setError("");
-      } catch (err) {
-        console.error("Error fetching invoices:", err);
-        setError("No se pudieron cargar las facturas");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [pagination.limit]
-  );
+      const data = await res.json();
+      setInvoices(data.invoices);
+      setPagination(data.pagination);
+      setError("");
+    } catch (err) {
+      console.error(err);
+      setError("No se pudieron cargar las facturas");
+      toast.error("Error al cargar facturas");
+    } finally {
+      setLoading(false);
+    }
+  }, [pagination.limit]);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       fetchInvoices(1, searchTerm);
-    }, 300);
-
+    }, 500);
     return () => clearTimeout(timeoutId);
   }, [searchTerm, fetchInvoices]);
 
-  // Cerrar dropdown al hacer clic fuera
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const handlePageChange = (newPage: number) => {
-    if (newPage >= 1 && newPage <= pagination.totalPages) {
-      fetchInvoices(newPage, searchTerm);
-    }
+  const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
+    fetchInvoices(value, searchTerm);
   };
 
-  const handleDropdownToggle = () => {
-    setIsDropdownOpen(!isDropdownOpen);
+  const handleOpenMenu = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+  const handleCloseMenu = () => {
+    setAnchorEl(null);
   };
 
-  const formatCurrency = (amount: number): string => {
+  const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("es-MX", {
       style: "currency",
       currency: "MXN",
     }).format(amount);
   };
 
-  const formatDate = (dateString: string | Date): string => {
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) {
-        return "Fecha inválida";
-      }
-      return date.toLocaleDateString("es-MX", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      });
-    } catch {
-      return "Fecha inválida";
+  const formatDate = (dateString: string | Date) => {
+    return new Date(dateString).toLocaleDateString("es-MX", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric"
+    });
+  };
+
+  const getStatusConfig = (status: string) => {
+    switch (status) {
+      case "stamped":
+        return { label: "Timbrada", color: "#10b981", bgcolor: "#f0fdf4", icon: <CheckCircle2 size={18} color="#64748b" /> };
+      case "cancelled":
+        return { label: "Cancelada", color: "#ef4444", bgcolor: "#fef2f2", icon: <XCircle size={18} color="#64748b" /> };
+      default:
+        return { label: "Pendiente", color: "#f59e0b", bgcolor: "#fffbeb", icon: <Clock size={18} color="#64748b" /> };
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    type StatusKey = "pending" | "stamped" | "cancelled";
-
-    const statusConfig: Record<
-      StatusKey,
-      {
-        color: string;
-        text: string;
-        icon: string;
-      }
-    > = {
-      pending: {
-        color: "from-yellow-100 to-amber-100 text-yellow-800",
-        text: "Pendiente",
-        icon: "⏳",
-      },
-      stamped: {
-        color: "from-green-100 to-emerald-100 text-green-800",
-        text: "Timbrada",
-        icon: "✅",
-      },
-      cancelled: {
-        color: "from-red-100 to-pink-100 text-red-800",
-        text: "Cancelada",
-        icon: "❌",
-      },
-    };
-
-    const config = statusConfig[status as StatusKey] || statusConfig.pending;
-
-    return (
-      <span
-        className={`px-3 py-1.5 rounded-full text-xs font-medium bg-gradient-to-r ${config.color} flex items-center gap-1`}
-      >
-        <span>{config.icon}</span>
-        {config.text}
-      </span>
-    );
-  };
-
-  const calculateTotalAmount = (invoice: Invoice): number => {
-    return (invoice.subtotal || 0) + (invoice.taxes || 0);
-  };
-
   const calculateTotals = () => {
-    let totalAmount = 0;
-    let pendingAmount = 0;
-    let stampedAmount = 0;
-
-    invoices.forEach((invoice) => {
-      const amount = calculateTotalAmount(invoice);
-      totalAmount += amount;
-
-      if (invoice.status === "pending") {
-        pendingAmount += amount;
-      } else if (invoice.status === "stamped") {
-        stampedAmount += amount;
-      }
+    let totals = { amount: 0, stamped: 0, pending: 0 };
+    invoices.forEach(inv => {
+      const total = (inv.subtotal || 0) + (inv.taxes || 0);
+      totals.amount += total;
+      if (inv.status === "stamped") totals.stamped++;
+      else if (inv.status === "pending") totals.pending++;
     });
-
-    return { totalAmount, pendingAmount, stampedAmount };
+    return totals;
   };
 
-  const totals = calculateTotals();
+  const summary = calculateTotals();
 
   if (loading && invoices.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 flex justify-center items-center">
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-8 rounded-2xl border border-gray-200 shadow-sm text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-xl font-semibold text-gray-700">
-            Cargando facturas...
-          </p>
-        </div>
-      </div>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <Stack sx={{ alignItems: 'center' }} spacing={2}>
+          <CircularProgress size={32} sx={{ color: '#334155' }} />
+          <Typography sx={{ color: '#64748b', fontWeight: 500 }}>Cargando facturas...</Typography>
+        </Stack>
+      </Box>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
-      {/* Hero Section con Dropdown */}
-      <div className="pt-8 pb-8 px-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-b-2xl shadow-lg">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div>
-              <h1 className="text-4xl font-bold mb-2 leading-tight">
-                Facturas
-              </h1>
-              <p className="text-xl text-blue-100 max-w-2xl">
-                Gestiona y genera facturas para tus clientes
-              </p>
-            </div>
+    <Box sx={{ maxWidth: 1200, mx: "auto", py: 6, px: 3, animation: "fadeIn 0.3s ease" }}>
+      <style jsx global>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
 
-            {/* Dropdown para Nuevas Facturas */}
-            <div className="mt-4 md:mt-0 relative" ref={dropdownRef}>
-              <button
-                onClick={handleDropdownToggle}
-                className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center gap-2"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                  />
-                </svg>
-                Nueva Factura
-                <svg
-                  className={`w-4 h-4 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </button>
+      {/* Header Section (Products Page Style) */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 6, flexWrap: 'wrap', gap: 3 }}>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 700, color: '#1e293b', letterSpacing: '-0.02em', mb: 1 }}>
+            Facturas
+          </Typography>
+          <Typography sx={{ color: '#64748b', fontSize: '0.95rem' }}>
+            Gestión y generación de comprobantes fiscales CFDI 4.0
+          </Typography>
+        </Box>
+        <Box>
+          <Button
+            variant="contained"
+            onClick={handleOpenMenu}
+            startIcon={<Plus size={18} strokeWidth={2} color="#64748b" />}
+            endIcon={<ChevronDown size={18} color="#64748b" />}
+            sx={{
+              bgcolor: '#334155',
+              '&:hover': { bgcolor: '#1e293b' },
+              textTransform: 'none',
+              borderRadius: 1.5,
+              px: 3,
+              py: 1.2,
+              boxShadow: 'none',
+              fontWeight: 600
+            }}
+          >
+            Nueva Factura
+          </Button>
+          <Menu
+            anchorEl={anchorEl}
+            open={openMenu}
+            onClose={handleCloseMenu}
+            sx={{ mt: 1 }}
+            slotProps={{ paper: { sx: { borderRadius: 2, minWidth: 200, boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' } } }}
+          >
+            <MenuItem onClick={() => { handleCloseMenu(); router.push('/dashboard/invoices/create'); }}>
+              <ListItemIcon><FileDigit size={18} /></ListItemIcon>
+              <ListItemText primary="Factura Directa" secondary="Crear desde cero" />
+            </MenuItem>
+            <Divider />
+            <MenuItem onClick={() => { handleCloseMenu(); router.push('/dashboard/sales'); }}>
+              <ListItemIcon><TrendingUp size={18} /></ListItemIcon>
+              <ListItemText primary="Facturar Venta" secondary="Desde historial de ventas" />
+            </MenuItem>
+          </Menu>
+        </Box>
+      </Box>
 
-              {/* Dropdown Menu */}
-              {isDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 z-50">
-                  <div className="py-2">
-                    <Link
-                      href="/dashboard/invoices/create"
-                      onClick={() => setIsDropdownOpen(false)}
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 transition-colors duration-150 group/item"
-                    >
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center group-hover/item:bg-blue-200 transition-colors">
-                        <svg
-                          className="w-5 h-5 text-blue-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                          />
-                        </svg>
-                      </div>
-                      <div>
-                        <div className="font-semibold text-gray-800 group-hover/item:text-blue-700">
-                          Factura Directa
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          Crear factura desde cero
-                        </div>
-                      </div>
-                    </Link>
+      {/* Stats Cards */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        {[
+          { label: 'TOTAL FACTURADO', value: formatCurrency(summary.amount), icon: <CreditCard size={18} color="#64748b" /> },
+          { label: 'TIMBRADAS', value: pagination.totalCount, icon: <CheckCircle2 size={18} color="#64748b" /> },
+          { label: 'PENDIENTES', value: summary.pending, icon: <Clock size={18} color="#64748b" /> },
+        ].map((stat, i) => (
+          <Grid key={i} size={{ xs: 12, md: 4 }}>
+            <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2, borderColor: '#e2e8f0', display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: '#f8fafc', display: 'flex' }}>
+                {stat.icon}
+              </Box>
+              <Box>
+                <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  {stat.label}
+                </Typography>
+                <Typography variant="h5" sx={{ fontWeight: 700, color: '#1e293b' }}>
+                  {stat.value}
+                </Typography>
+              </Box>
+            </Paper>
+          </Grid>
+        ))}
+      </Grid>
 
-                    <div className="border-t border-gray-100 my-1"></div>
+      {/* Filters Bar (Products Page Style) */}
+      <Paper variant="outlined" sx={{ p: 2, mb: 4, borderRadius: 2, borderColor: '#e2e8f0', display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+        <TextField
+          size="small"
+          placeholder="Buscar por folio, cliente, RFC..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={18} color="#64748b" />
+                </InputAdornment>
+              ),
+            }
+          }}
+          sx={{ width: { xs: '100%', md: 400 }, "& .MuiOutlinedInput-root": { borderRadius: 1.5, bgcolor: '#f8fafc' } }}
+        />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+           <Button 
+            variant="outlined" 
+            startIcon={<Filter size={18} color="#64748b" />}
+            sx={{ borderRadius: 1.5, textTransform: 'none', px: 3, py: 0.8, borderColor: '#cbd5e1', color: '#475569', '&:hover': { bgcolor: '#f1f5f9', borderColor: '#94a3b8' } }}
+          >
+            Filtros
+          </Button>
+        </Box>
+      </Paper>
 
-                    <Link
-                      href="/dashboard/sales"
-                      onClick={() => setIsDropdownOpen(false)}
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-green-50 transition-colors duration-150 group/item"
-                    >
-                      <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center group-hover/item:bg-green-200 transition-colors">
-                        <svg
-                          className="w-5 h-5 text-green-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                          />
-                        </svg>
-                      </div>
-                      <div>
-                        <div className="font-semibold text-gray-800 group-hover/item:text-green-700">
-                          Facturar Venta
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          Desde una venta existente
-                        </div>
-                      </div>
-                    </Link>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Resto del contenido (sin cambios) */}
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Barra de búsqueda y estadísticas */}
-        <div className="mb-8 grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="lg:col-span-2 p-6 rounded-2xl bg-gradient-to-r from-gray-50 to-blue-50 border border-gray-200 shadow-sm">
-            <div className="flex items-center space-x-4">
-              <div className="text-2xl bg-white p-3 rounded-xl shadow-sm">
-                🔍
-              </div>
-              <div className="flex-1">
-                <input
-                  type="text"
-                  placeholder="Buscar por folio, cliente, RFC o estado..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full p-4 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="p-6 rounded-2xl bg-gradient-to-r from-green-50 to-emerald-50 border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 mb-1">Total Facturado</p>
-                <p className="text-2xl font-bold text-gray-800">
-                  {formatCurrency(totals.totalAmount)}
-                </p>
-              </div>
-              <div className="text-2xl">💰</div>
-            </div>
-          </div>
-
-          <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-50 to-cyan-50 border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 mb-1">Timbradas</p>
-                <p className="text-2xl font-bold text-gray-800">
-                  {invoices.filter((i) => i.status === "stamped").length}
-                </p>
-              </div>
-              <div className="text-2xl">✅</div>
-            </div>
-          </div>
-        </div>
-
-        {error && (
-          <div className="mb-8 p-6 rounded-2xl bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 shadow-sm">
-            <div className="flex items-center space-x-4">
-              <div className="text-2xl bg-white p-3 rounded-xl shadow-sm">
-                ⚠️
-              </div>
-              <div className="flex-1">
-                <p className="text-red-600">{error}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Tabla de facturas */}
-        <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300 bg-white">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gradient-to-r from-gray-900 to-gray-800 text-white">
-                  <th className="px-6 py-4 text-left font-semibold">Factura</th>
-                  <th className="px-6 py-4 text-left font-semibold">Fecha</th>
-                  <th className="px-6 py-4 text-left font-semibold">Cliente</th>
-                  <th className="px-6 py-4 text-left font-semibold">RFC</th>
-                  <th className="px-6 py-4 text-left font-semibold">Total</th>
-                  <th className="px-6 py-4 text-left font-semibold">Estado</th>
-                  <th className="px-6 py-4 text-left font-semibold">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {invoices.map((invoice) => (
-                  <tr
-                    key={invoice.id}
-                    className="border-b border-gray-200 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 group"
-                  >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <div className="bg-white p-2 rounded-lg shadow-sm mr-3 group-hover:shadow-md transition-shadow">
-                          🧾
-                        </div>
-                        <div className="font-medium text-gray-800">
-                          {invoice.serie && invoice.folio
-                            ? `${invoice.serie}-${invoice.folio}`
-                            : `#${invoice.id?.slice(0, 8).toUpperCase()}`}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-gray-700">
-                        {formatDate(invoice.createdAt || new Date())}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-gray-800">
-                        {invoice.customer?.name || "Cliente no disponible"}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="font-mono text-gray-700 text-sm">
-                        {invoice.customer?.rfc || "N/A"}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-green-600">
-                        {formatCurrency(calculateTotalAmount(invoice))}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      {getStatusBadge(invoice.status)}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex gap-2">
-                        <Link
-                          href={`/dashboard/invoices/${invoice.id}`}
-                          className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 shadow-sm hover:shadow flex items-center"
-                        >
-                          <span className="mr-2">👁️</span>
-                          Ver
-                        </Link>
-                        {invoice.status === "stamped" && invoice.pdfUrl && (
-                          <button
-                            onClick={() =>
-                              window.open(invoice.pdfUrl, "_blank")
-                            }
-                            className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-lg font-medium hover:from-green-600 hover:to-emerald-600 transition-all duration-200 shadow-sm hover:shadow flex items-center"
-                            title="Descargar PDF"
-                          >
-                            <span className="mr-2">📄</span>
-                            PDF
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {invoices.length === 0 && !loading && (
-            <div className="p-12 text-center">
-              <div className="bg-gradient-to-r from-gray-50 to-blue-50 p-8 rounded-2xl inline-block border border-gray-200">
-                <div className="text-6xl mb-4">🧾</div>
-                <h3 className="text-2xl font-bold text-gray-800 mb-2">
-                  {searchTerm
-                    ? "No se encontraron facturas"
-                    : "No hay facturas registradas"}
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  {searchTerm
-                    ? "Intenta con otros términos de búsqueda"
-                    : "Comienza generando tu primera factura"}
-                </p>
-                <div className="relative inline-block" ref={dropdownRef}>
-                  <button
-                    onClick={handleDropdownToggle}
-                    className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-8 py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-indigo-600 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2"
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+      {/* Table Section */}
+      <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, borderColor: '#e2e8f0', overflow: 'hidden' }}>
+        <Table sx={{ minWidth: 900 }}>
+          <TableHead>
+            <TableRow sx={{ bgcolor: '#f8fafc' }}>
+              <TableCell sx={{ color: '#64748b', fontWeight: 700, fontSize: '0.75rem', py: 2, textTransform: 'uppercase' }}>FACTURA / FOLIO</TableCell>
+              <TableCell sx={{ color: '#64748b', fontWeight: 700, fontSize: '0.75rem', py: 2, textTransform: 'uppercase' }}>FECHA</TableCell>
+              <TableCell sx={{ color: '#64748b', fontWeight: 700, fontSize: '0.75rem', py: 2, textTransform: 'uppercase' }}>CLIENTE</TableCell>
+              <TableCell sx={{ color: '#64748b', fontWeight: 700, fontSize: '0.75rem', py: 2, textTransform: 'uppercase' }}>TOTAL</TableCell>
+              <TableCell sx={{ color: '#64748b', fontWeight: 700, fontSize: '0.75rem', py: 2, textTransform: 'uppercase' }}>ESTADO</TableCell>
+              <TableCell align="right" sx={{ color: '#64748b', fontWeight: 700, fontSize: '0.75rem', py: 2, textTransform: 'uppercase' }}>ACCIONES</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {invoices.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} align="center" sx={{ py: 10 }}>
+                  <Stack sx={{ alignItems: 'center', opacity: 0.5 }} spacing={2}>
+                    <FileText size={18} strokeWidth={1} color="#64748b" />
+                    <Typography>No se encontraron facturas</Typography>
+                  </Stack>
+                </TableCell>
+              </TableRow>
+            ) : (
+              invoices.map((inv) => {
+                const status = getStatusConfig(inv.status);
+                const total = (inv.subtotal || 0) + (inv.taxes || 0);
+                return (
+                  <TableRow key={inv.id} hover sx={{ '&:hover': { bgcolor: '#f8fafc' } }}>
+                    <TableCell>
+                      <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
+                        <Avatar sx={{ bgcolor: '#f1f5f9', color: '#475569', borderRadius: 1.5, width: 36, height: 36 }}>
+                          <FileText size={18} />
+                        </Avatar>
+                        <Box>
+                          <Typography sx={{ fontWeight: 600, color: '#1e293b' }}>
+                            {inv.serie && inv.folio ? `${inv.serie}-${inv.folio}` : `#${inv.id?.slice(0, 8).toUpperCase()}`}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                            CFDI 4.0
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    </TableCell>
+                    <TableCell>
+                      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', color: '#64748b' }}>
+                        <Calendar size={18} color="#64748b" />
+                        <Typography variant="body2">{formatDate(inv.createdAt || new Date())}</Typography>
+                      </Stack>
+                    </TableCell>
+                    <TableCell>
+                      <Typography sx={{ fontWeight: 500, color: '#334155' }}>
+                        {inv.customer?.name || "Cliente General"}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#94a3b8', fontFamily: 'monospace' }}>
+                        {inv.customer?.rfc}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography sx={{ fontWeight: 700, color: '#1e293b' }}>
+                        {formatCurrency(total)}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip 
+                        icon={status.icon} 
+                        label={status.label} 
+                        size="small"
+                        sx={{ 
+                          bgcolor: status.bgcolor, 
+                          color: status.color, 
+                          fontWeight: 600,
+                          borderRadius: 1,
+                          '& .MuiChip-icon': { color: 'inherit' }
+                        }} 
                       />
-                    </svg>
-                    Generar Factura
-                  </button>
-
-                  {isDropdownOpen && (
-                    <div className="absolute left-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 z-50">
-                      <div className="py-2">
-                        <Link
-                          href="/dashboard/invoices/create"
-                          onClick={() => setIsDropdownOpen(false)}
-                          className="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 transition-colors duration-150 group/item"
-                        >
-                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center group-hover/item:bg-blue-200 transition-colors">
-                            <svg
-                              className="w-5 h-5 text-blue-600"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
+                    </TableCell>
+                    <TableCell align="right">
+                      <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
+                        <Tooltip title="Ver Detalle">
+                          <IconButton size="small" component={Link} href={`/dashboard/invoices/${inv.id}`} sx={{ color: '#64748b', bgcolor: '#f1f5f9', borderRadius: 1.2 }}>
+                            <Eye size={18} color="#64748b" />
+                          </IconButton>
+                        </Tooltip>
+                        {inv.pdfUrl && (
+                          <Tooltip title="Descargar PDF">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => window.open(inv.pdfUrl, "_blank")}
+                              sx={{ color: '#64748b', bgcolor: '#f0fdf4', borderRadius: 1.2 }}
                             >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                              />
-                            </svg>
-                          </div>
-                          <div>
-                            <div className="font-semibold text-gray-800 group-hover/item:text-blue-700">
-                              Factura Directa
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              Crear factura desde cero
-                            </div>
-                          </div>
-                        </Link>
+                              <Download size={18} color="#64748b" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                        <IconButton size="small" sx={{ borderRadius: 1.2 }}>
+                          <MoreVertical size={18} color="#64748b" />
+                        </IconButton>
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
-                        <div className="border-t border-gray-100 my-1"></div>
+      {/* Pagination */}
+      {!loading && pagination.totalPages > 1 && (
+        <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
+          <Pagination 
+            count={pagination.totalPages} 
+            page={pagination.page} 
+            onChange={handlePageChange} 
+            shape="rounded"
+            sx={{
+              '& .MuiPaginationItem-root': { fontWeight: 600, color: '#475569' },
+              '& .Mui-selected': { bgcolor: '#f1f5f9 !important', color: '#1e293b' }
+            }}
+          />
+        </Box>
+      )}
 
-                        <Link
-                          href="/dashboard/sales"
-                          onClick={() => setIsDropdownOpen(false)}
-                          className="flex items-center gap-3 px-4 py-3 hover:bg-green-50 transition-colors duration-150 group/item"
-                        >
-                          <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center group-hover/item:bg-green-200 transition-colors">
-                            <svg
-                              className="w-5 h-5 text-green-600"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                              />
-                            </svg>
-                          </div>
-                          <div>
-                            <div className="font-semibold text-gray-800 group-hover/item:text-green-700">
-                              Facturar Venta
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              Desde una venta existente
-                            </div>
-                          </div>
-                        </Link>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Estadísticas adicionales */}
-        {invoices.length > 0 && (
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-6 rounded-2xl bg-gradient-to-r from-purple-50 to-pink-50 border border-gray-200 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 mb-1">Total Facturas</p>
-                  <p className="text-3xl font-bold text-gray-800">
-                    {pagination.totalCount}
-                  </p>
-                </div>
-                <div className="text-3xl">📊</div>
-              </div>
-            </div>
-            <div className="p-6 rounded-2xl bg-gradient-to-r from-yellow-50 to-amber-50 border border-gray-200 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 mb-1">Pendientes</p>
-                  <p className="text-3xl font-bold text-gray-800">
-                    {invoices.filter((i) => i.status === "pending").length}
-                  </p>
-                </div>
-                <div className="text-3xl">⏳</div>
-              </div>
-            </div>
-            <div className="p-6 rounded-2xl bg-gradient-to-r from-red-50 to-pink-50 border border-gray-200 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 mb-1">Canceladas</p>
-                  <p className="text-3xl font-bold text-gray-800">
-                    {invoices.filter((i) => i.status === "cancelled").length}
-                  </p>
-                </div>
-                <div className="text-3xl">❌</div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Paginación */}
-        {pagination.totalPages > 1 && (
-          <div className="mt-8 flex justify-center items-center gap-3">
-            <button
-              onClick={() => handlePageChange(pagination.page - 1)}
-              disabled={pagination.page === 1}
-              className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-            >
-              ← Anterior
-            </button>
-
-            <div className="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 text-blue-700 font-medium">
-              Página {pagination.page} de {pagination.totalPages}
-            </div>
-
-            <button
-              onClick={() => handlePageChange(pagination.page + 1)}
-              disabled={pagination.page === pagination.totalPages}
-              className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-            >
-              Siguiente →
-            </button>
-          </div>
-        )}
-
-        {/* Enlaces rápidos */}
-        <div className="mt-12 bg-gradient-to-r from-gray-900 to-gray-800 text-white py-8 px-6 rounded-2xl">
-          <h3 className="text-xl font-bold mb-6 text-center">
-            Acciones Rápidas
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Link
-              href="/dashboard/customers"
-              className="bg-white/5 hover:bg-white/10 p-4 rounded-xl transition-all duration-200 group text-center"
-            >
-              <div className="text-2xl mb-2">👥</div>
-              <div className="font-medium mb-1 group-hover:text-blue-300">
-                Clientes
-              </div>
-              <div className="text-sm text-gray-300">Gestionar clientes</div>
-            </Link>
-            <Link
-              href="/dashboard/products"
-              className="bg-white/5 hover:bg-white/10 p-4 rounded-xl transition-all duration-200 group text-center"
-            >
-              <div className="text-2xl mb-2">📦</div>
-              <div className="font-medium mb-1 group-hover:text-blue-300">
-                Productos
-              </div>
-              <div className="text-sm text-gray-300">Catálogo de productos</div>
-            </Link>
-            <Link
-              href="/dashboard/reports/invoices"
-              className="bg-white/5 hover:bg-white/10 p-4 rounded-xl transition-all duration-200 group text-center"
-            >
-              <div className="text-2xl mb-2">📈</div>
-              <div className="font-medium mb-1 group-hover:text-blue-300">
-                Reportes
-              </div>
-              <div className="text-sm text-gray-300">
-                Estadísticas de facturación
-              </div>
-            </Link>
-          </div>
-        </div>
-      </div>
-    </div>
+      {/* Action Links */}
+      <Box sx={{ mt: 8 }}>
+        <Typography variant="subtitle2" sx={{ color: '#64748b', mb: 3, display: 'flex', alignItems: 'center', gap: 1, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <History size={18} color="#64748b" /> Acciones Rápidas
+        </Typography>
+        <Grid container spacing={2}>
+          {[
+            { label: 'Clientes', link: '/dashboard/customers', icon: <User size={18} /> },
+            { label: 'Productos', link: '/dashboard/products', icon: <FileDigit size={18} /> },
+            { label: 'Ventas', link: '/dashboard/sales', icon: <TrendingUp size={18} /> }
+          ].map((item, i) => (
+            <Grid key={i} size={{ xs: 12, sm: 4 }}>
+              <Paper 
+                component={Link} 
+                href={item.link}
+                variant="outlined" 
+                sx={{ 
+                  p: 2.5, borderRadius: 2, bgcolor: '#fff', display: 'flex', alignItems: 'center', gap: 2, 
+                  textDecoration: 'none', transition: '0.2s', borderColor: '#e2e8f0',
+                  '&:hover': { bgcolor: '#f8fafc', borderColor: '#cbd5e1', transform: 'translateY(-2px)' } 
+                }}
+              >
+                <Box sx={{ color: '#64748b', display: 'flex' }}>{item.icon}</Box>
+                <Typography sx={{ fontWeight: 600, color: '#475569' }}>{item.label}</Typography>
+              </Paper>
+            </Grid>
+          ))}
+        </Grid>
+      </Box>
+    </Box>
   );
 }

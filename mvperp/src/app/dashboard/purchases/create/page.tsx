@@ -189,7 +189,7 @@ export default function CreatePurchase() {
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", mb: 4, flexWrap: "wrap", gap: 3 }}>
         <Box>
           <Button
-            startIcon={<ArrowLeft size={16} />}
+            startIcon={<ArrowLeft size={18} color="#64748b" />}
             onClick={() => router.back()}
             sx={{ color: '#64748b', mb: 1.5, p: 0, '&:hover': { bgcolor: 'transparent', color: '#1e293b' }, textTransform: 'none' }}
           >
@@ -224,7 +224,7 @@ export default function CreatePurchase() {
         <Alert 
           severity="warning" 
           variant="outlined" 
-          icon={<Info size={20} />}
+          icon={<Info size={18} color="#64748b" />}
           action={
             <Button color="inherit" size="small" onClick={() => router.push("/dashboard/suppliers")} sx={{ fontWeight: 700, textTransform: 'none' }}>
               IR A PROVEEDORES
@@ -244,11 +244,11 @@ export default function CreatePurchase() {
             <Paper variant="outlined" sx={{ borderRadius: 3, borderColor: '#e2e8f0', overflow: 'hidden' }}>
               <Box sx={{ p: 2.5, borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: '#f8fafc' }}>
                 <Typography sx={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Package size={18} /> Detalle de Productos
+                  <Package size={18} color="#64748b" /> Detalle de Productos
                 </Typography>
                 <Button
                   size="small"
-                  startIcon={<Plus size={16} />}
+                  startIcon={<Plus size={18} color="#64748b" />}
                   onClick={addItem}
                   disabled={!supplierId}
                   sx={{ textTransform: 'none', borderRadius: 1.5, fontWeight: 600 }}
@@ -273,7 +273,7 @@ export default function CreatePurchase() {
                       <TableRow>
                         <TableCell colSpan={5} align="center" sx={{ py: 6, color: '#94a3b8' }}>
                           <Stack sx={{ alignItems: 'center' }} spacing={1}>
-                            <ShoppingBag size={32} strokeWidth={1} style={{ opacity: 0.5 }} />
+                            <ShoppingBag size={18} strokeWidth={1} style={{ opacity: 0.5 }} color="#64748b" />
                             <Typography variant="body2">No hay productos en esta compra</Typography>
                           </Stack>
                         </TableCell>
@@ -342,7 +342,7 @@ export default function CreatePurchase() {
                           </TableCell>
                           <TableCell sx={{ py: 1.5 }} align="right">
                             <IconButton size="small" onClick={() => removeItem(index)} sx={{ color: '#f87171' }}>
-                              <Trash2 size={16} />
+                              <Trash2 size={18} color="#64748b" />
                             </IconButton>
                           </TableCell>
                         </TableRow>
