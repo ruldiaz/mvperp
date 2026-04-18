@@ -3,6 +3,28 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
+import {
+  Box,
+  Typography,
+  Button,
+  TextField,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Checkbox,
+  Pagination,
+  InputAdornment,
+  CircularProgress,
+  Stack,
+  Select,
+  MenuItem,
+  SelectChangeEvent
+} from "@mui/material";
+import { Search, Plus, UploadCloud, Trash2 } from "lucide-react";
 
 interface Product {
   id: string;
@@ -67,13 +89,14 @@ export default function Products() {
   );
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
 
-  const handleCheckbox = (id: string) => {
+  const handleCheckbox = (id: string, event: React.MouseEvent) => {
+    event.stopPropagation();
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   };
 
-  const handleSelectAll = () => {
+  const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
     const currentPageIds = currentItems.map((p) => p.id);
     if (currentPageIds.every((id) => selectedIds.includes(id))) {
       setSelectedIds((prev) =>
@@ -122,41 +145,13 @@ export default function Products() {
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setSearchTerm(e.target.value);
 
-  const handleItemsPerPageChange = (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ) => {
+  const handleItemsPerPageChange = (e: SelectChangeEvent) => {
     setItemsPerPage(Number(e.target.value));
     setCurrentPage(1);
   };
 
   const goToPage = (page: number) => {
     if (page >= 1 && page <= totalPages) setCurrentPage(page);
-  };
-
-  const getPageNumbers = () => {
-    const pageNumbers: (number | string)[] = [];
-    const maxVisiblePages = 5;
-    if (totalPages <= maxVisiblePages) {
-      for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
-    } else {
-      if (currentPage <= 3) {
-        for (let i = 1; i <= 4; i++) pageNumbers.push(i);
-        pageNumbers.push("...");
-        pageNumbers.push(totalPages);
-      } else if (currentPage >= totalPages - 2) {
-        pageNumbers.push(1);
-        pageNumbers.push("...");
-        for (let i = totalPages - 3; i <= totalPages; i++) pageNumbers.push(i);
-      } else {
-        pageNumbers.push(1);
-        pageNumbers.push("...");
-        for (let i = currentPage - 1; i <= currentPage + 1; i++)
-          pageNumbers.push(i);
-        pageNumbers.push("...");
-        pageNumbers.push(totalPages);
-      }
-    }
-    return pageNumbers;
   };
 
   const formatCurrency = (amount?: number) => {
@@ -169,313 +164,182 @@ export default function Products() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-[500px]">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">Cargando productos...</p>
-        </div>
-      </div>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 500 }}>
+        <Box sx={{ textAlign: 'center' }}>
+          <CircularProgress size={40} sx={{ color: '#334155', mb: 2 }} />
+          <Typography sx={{ color: '#64748b', fontWeight: 500 }}>Cargando productos...</Typography>
+        </Box>
+      </Box>
     );
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300 max-w-7xl mx-auto">
+    <Box sx={{ maxWidth: 1200, mx: "auto", py: 6, px: 3, animation: 'fadeIn 0.3s ease' }}>
+      <style jsx global>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+      
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">Productos</h1>
-          <p className="text-gray-600 mt-1">
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", mb: 6, flexWrap: "wrap", gap: 3 }}>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 700, color: '#1e293b', letterSpacing: '-0.02em', mb: 1 }}>
+            Productos
+          </Typography>
+          <Typography sx={{ color: '#64748b', fontSize: '0.95rem' }}>
             Gestiona tu catálogo de productos
-          </p>
-        </div>
-
-        <div className="flex flex-wrap gap-3 w-full sm:w-auto">
+          </Typography>
+        </Box>
+        <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', gap: 2 }}>
           {selectedIds.length > 0 && (
-            <button
+            <Button
+              variant="contained"
+              color="error"
               onClick={handleDeleteSelected}
-              className="bg-gradient-to-r from-red-600 to-pink-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2"
+              startIcon={<Trash2 size={18} />}
+              sx={{ borderRadius: 1.5, textTransform: 'none', px: 3, boxShadow: 'none' }}
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                />
-              </svg>
               Borrar ({selectedIds.length})
-            </button>
+            </Button>
           )}
-
-          <button
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2"
+          <Button
+            variant="contained"
             onClick={() => router.push("/dashboard/products/create")}
+            startIcon={<Plus size={18} strokeWidth={2} />}
+            sx={{ borderRadius: 1.5, px: 3, py: 1.2, bgcolor: '#334155', '&:hover': { bgcolor: '#1e293b' }, textTransform: 'none', boxShadow: 'none' }}
           >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-              />
-            </svg>
             Crear producto
-          </button>
-
-          <button
-            className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2"
+          </Button>
+          <Button
+            variant="outlined"
             onClick={() => router.push("/dashboard/products/import")}
+            startIcon={<UploadCloud size={18} />}
+            sx={{ borderRadius: 1.5, px: 3, py: 1.2, borderColor: '#cbd5e1', color: '#475569', textTransform: 'none', '&:hover': { bgcolor: '#f8fafc', borderColor: '#94a3b8' } }}
           >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-              />
-            </svg>
             Importar CSV
-          </button>
-        </div>
-      </div>
+          </Button>
+        </Stack>
+      </Box>
 
-      {/* Barra de búsqueda */}
-      <div className="relative">
-        <input
-          type="text"
+      {/* Filter Bar */}
+      <Paper variant="outlined" sx={{ p: 2, mb: 4, borderRadius: 2, borderColor: '#e2e8f0', display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+        <TextField
+          size="small"
           placeholder="Buscar por nombre, SKU o categoría..."
           value={searchTerm}
           onChange={handleSearchChange}
-          className="w-full sm:w-96 border border-gray-300 rounded-xl px-5 py-3 pr-12 focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={18} color="#94a3b8" />
+                </InputAdornment>
+              ),
+            }
+          }}
+          sx={{ width: { xs: '100%', md: 400 }, "& .MuiOutlinedInput-root": { borderRadius: 1.5, bgcolor: '#f8fafc' } }}
         />
-        <svg
-          className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-          />
-        </svg>
-      </div>
-
-      <div className="flex justify-between items-center text-sm text-gray-600 mb-4">
-        <div className="flex items-center gap-2">
-          <span>Mostrar</span>
-          <select
-            value={itemsPerPage}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="body2" sx={{ color: '#64748b' }}>Mostrar</Typography>
+          <Select
+            size="small"
+            value={itemsPerPage.toString()}
             onChange={handleItemsPerPageChange}
-            className="bg-white border border-gray-300 rounded-lg px-3 py-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            sx={{ borderRadius: 1.5, bgcolor: '#f8fafc', "& .MuiOutlinedInput-notchedOutline": { borderColor: '#e2e8f0' } }}
           >
-            <option value={10}>10 por página</option>
-            <option value={20}>20 por página</option>
-            <option value={50}>50 por página</option>
-          </select>
-        </div>
-        <div>
-          {filteredProducts.length} producto(s)
-          {searchTerm && ` para "${searchTerm}"`}
-        </div>
-      </div>
+            <MenuItem value={10}>10 por página</MenuItem>
+            <MenuItem value={20}>20 por página</MenuItem>
+            <MenuItem value={50}>50 por página</MenuItem>
+          </Select>
+          <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+            {filteredProducts.length} resultados
+          </Typography>
+        </Box>
+      </Paper>
 
-      {/* Tabla */}
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gradient-to-r from-gray-50 to-blue-50">
-                <th className="px-6 py-4 w-12">
-                  <input
-                    type="checkbox"
-                    checked={
-                      currentItems.length > 0 &&
-                      currentItems.every((p) => selectedIds.includes(p.id))
-                    }
-                    onChange={handleSelectAll}
-                    className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
-                  />
-                </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">
-                  Nombre
-                </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">
-                  SKU
-                </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">
-                  Stock
-                </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">
-                  Categoría
-                </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">
-                  Precio
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {currentItems.length > 0 ? (
-                currentItems.map((p) => (
-                  <tr
-                    key={p.id}
-                    className={`hover:bg-gray-50 transition-colors duration-150 ${selectedIds.includes(p.id) ? "bg-blue-50" : ""}`}
-                  >
-                    <td className="px-6 py-5 text-center">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(p.id)}
-                        onChange={() => handleCheckbox(p.id)}
-                        className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
-                      />
-                    </td>
-                    <td
-                      className="px-6 py-5 font-medium text-blue-600 hover:underline cursor-pointer max-w-xs truncate"
-                      onClick={() => goToDetail(p.id)}
-                      title={p.name}
-                    >
-                      {p.name}
-                    </td>
-                    <td
-                      className="px-6 py-5 text-gray-700 max-w-xs truncate"
-                      title={p.sku || ""}
-                    >
-                      {p.sku || "—"}
-                    </td>
-                    <td className="px-6 py-5">
-                      <span
-                        className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                          (p.stock || 0) <= 5
-                            ? "bg-red-100 text-red-800"
-                            : "bg-green-100 text-green-800"
-                        }`}
-                      >
-                        {p.stock ?? 0}
-                      </span>
-                    </td>
-                    <td
-                      className="px-6 py-5 text-gray-700 max-w-xs truncate"
-                      title={p.category || ""}
-                    >
-                      {p.category || "—"}
-                    </td>
-                    <td className="px-6 py-5 font-medium text-green-600">
-                      {formatCurrency(p.price)}
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="px-6 py-12 text-center text-gray-500"
-                  >
-                    {searchTerm ? (
-                      <div className="flex flex-col items-center gap-3">
-                        <svg
-                          className="w-12 h-12 text-gray-300"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="1.5"
-                            d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                          />
-                        </svg>
-                        <p>No se encontraron productos para {searchTerm}</p>
-                      </div>
-                    ) : (
-                      "No hay productos registrados"
-                    )}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Table */}
+      <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, borderColor: '#e2e8f0', overflow: 'hidden' }}>
+        <Table>
+          <TableHead sx={{ bgcolor: '#f8fafc' }}>
+            <TableRow>
+              <TableCell padding="checkbox">
+                <Checkbox 
+                  size="small"
+                  checked={currentItems.length > 0 && currentItems.every((p) => selectedIds.includes(p.id))}
+                  onChange={handleSelectAll}
+                  sx={{ color: '#cbd5e1', '&.Mui-checked': { color: '#334155' } }}
+                />
+              </TableCell>
+              <TableCell sx={{ color: '#64748b', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase' }}>Nombre</TableCell>
+              <TableCell sx={{ color: '#64748b', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase' }}>SKU</TableCell>
+              <TableCell sx={{ color: '#64748b', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase' }}>Stock</TableCell>
+              <TableCell sx={{ color: '#64748b', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase' }}>Categoría</TableCell>
+              <TableCell sx={{ color: '#64748b', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase' }}>Precio</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {currentItems.length > 0 ? (
+              currentItems.map((p) => (
+                <TableRow 
+                  key={p.id} 
+                  hover 
+                  sx={{ 
+                    cursor: 'pointer', 
+                    '&:hover': { bgcolor: '#fbfcfd' },
+                    ...(selectedIds.includes(p.id) && { bgcolor: 'rgba(51, 65, 85, 0.04)' })
+                  }}
+                  onClick={() => goToDetail(p.id)}
+                >
+                  <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      size="small"
+                      checked={selectedIds.includes(p.id)}
+                      onChange={(e) => handleCheckbox(p.id, e as any)}
+                      sx={{ color: '#cbd5e1', '&.Mui-checked': { color: '#334155' } }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600, color: '#1e293b' }}>{p.name}</TableCell>
+                  <TableCell sx={{ color: '#64748b' }}>{p.sku || "—"}</TableCell>
+                  <TableCell>
+                    <Box sx={{ 
+                      display: 'inline-block',
+                      px: 1.5, py: 0.5, borderRadius: 1, fontSize: '0.75rem', fontWeight: 600,
+                      color: (p.stock || 0) <= 5 ? '#991b1b' : '#166534',
+                      bgcolor: (p.stock || 0) <= 5 ? '#fee2e2' : '#dcfce7'
+                    }}>
+                      {p.stock ?? 0}
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={{ color: '#64748b' }}>{p.category || "—"}</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#0f172a' }}>{formatCurrency(p.price)}</TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                  <Typography sx={{ color: '#94a3b8', fontSize: '0.9rem' }}>
+                    {searchTerm ? `No se encontraron productos para "${searchTerm}"` : "No hay productos registrados"}
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
-      {/* Paginación */}
-      {filteredProducts.length > 0 && (
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 px-2 py-4">
-          <p className="text-sm text-gray-600">
-            Mostrando{" "}
-            <span className="font-medium">{indexOfFirstItem + 1}</span> –{" "}
-            <span className="font-medium">
-              {Math.min(indexOfLastItem, filteredProducts.length)}
-            </span>{" "}
-            de <span className="font-medium">{filteredProducts.length}</span>{" "}
-            productos
-          </p>
-
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => goToPage(1)}
-              disabled={currentPage === 1}
-              className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              &laquo;
-            </button>
-            <button
-              onClick={() => goToPage(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              &lsaquo;
-            </button>
-
-            {getPageNumbers().map((page, index) => (
-              <button
-                key={index}
-                onClick={() => typeof page === "number" && goToPage(page)}
-                disabled={page === "..."}
-                className={`w-10 h-10 flex items-center justify-center rounded-lg ${
-                  currentPage === page
-                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
-                    : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                } ${page === "..." ? "cursor-default bg-gray-100" : "transition-colors duration-150"}`}
-              >
-                {page}
-              </button>
-            ))}
-
-            <button
-              onClick={() => goToPage(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              &rsaquo;
-            </button>
-            <button
-              onClick={() => goToPage(totalPages)}
-              disabled={currentPage === totalPages}
-              className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              &raquo;
-            </button>
-          </div>
-        </div>
+      {/* Pagination */}
+      {filteredProducts.length > 0 && totalPages > 1 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 6 }}>
+          <Pagination 
+            count={totalPages} 
+            page={currentPage} 
+            onChange={(e, val) => goToPage(val)} 
+            sx={{ '& .MuiPaginationItem-root': { borderRadius: 1.5 } }} 
+          />
+        </Box>
       )}
-    </div>
+    </Box>
   );
 }

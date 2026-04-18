@@ -205,7 +205,7 @@ export default function Quotations() {
                   <TableCell sx={{ fontWeight: 700, color: '#0f172a' }}>{formatCurrency(q.totalAmount * 1.16)}</TableCell>
                   <TableCell>{getStatusChip(q.status)}</TableCell>
                   <TableCell align="right">
-                    <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                    <Stack direction="row" spacing={0.5} sx={{ justifyContent: "flex-end" }}>
                       <IconButton size="small" component={Link} href={`/dashboard/sales/quotation/${q.id}`} sx={{ color: '#94a3b8', '&:hover': { color: '#334155' } }}>
                         <Eye size={18} strokeWidth={1.5} />
                       </IconButton>
