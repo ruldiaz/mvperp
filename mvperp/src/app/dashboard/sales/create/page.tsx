@@ -1,10 +1,22 @@
+// src/app/dashboard/sales/create/page.tsx
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Product } from "@/types/product";
 import { Customer } from "@/types/customer";
 import { toast } from "react-hot-toast";
+import { 
+  Box, Typography, Paper, Grid, Stack, Button, IconButton, TextField, 
+  Select, MenuItem, FormControl, InputLabel, CircularProgress, Alert, 
+  Tooltip, InputAdornment, Divider, useTheme, Table, TableBody, TableCell,
+  TableContainer, TableHead, TableRow, Collapse
+} from "@mui/material";
+import { 
+  ArrowLeft, Plus, Trash2, Save, ShoppingBag, User, Settings2, 
+  Package, DollarSign, FileText, AlertTriangle, Search, X, ChevronDown, ChevronUp
+} from "lucide-react";
 
 const IVA_PERCENTAGE = 0.16;
 
@@ -14,25 +26,21 @@ type TaxMode = "net" | "gross"; // net = Sin IVA, gross = Con IVA
 interface ExtendedSaleItem {
   productId: string;
   quantity: number;
-  
-  // Data for calculations
   cost: number;
   margin: number;
   taxMode: TaxMode;
-  typedPrice: number; // Used only in manual mode to remember what was typed
-
-  // Resulting calculations
-  unitPrice: number; // The final Base Price (without IVA)
-  totalPrice: number; // quantity * unitPrice
-  
-  // Extra fields
+  typedPrice: number;
+  unitPrice: number;
+  totalPrice: number;
   satProductKey?: string;
   satUnitKey?: string;
   description?: string;
+  showDetails?: boolean;
 }
 
 export default function CreateSale() {
   const router = useRouter();
+  const theme = useTheme();
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   
@@ -56,7 +64,7 @@ export default function CreateSale() {
   const totalAmountWithoutIVA = items.reduce((sum, item) => sum + item.totalPrice, 0);
   const ivaAmount = totalAmountWithoutIVA * IVA_PERCENTAGE;
   const totalAmountWithIVA = totalAmountWithoutIVA * (1 + IVA_PERCENTAGE);
-  const totalItems = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+  const totalItemsCount = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
 
   const selectedCustomerData = customers.find((c) => c.id === selectedCustomer);
 
@@ -101,27 +109,18 @@ export default function CreateSale() {
       product.sku?.toLowerCase().includes(productSearch.toLowerCase())
   );
 
-  // Use useCallback so we dont get stale closures
   const calculateItemMath = useCallback((item: ExtendedSaleItem, mode: PricingMode, gMargin: number): ExtendedSaleItem => {
     let basePrice = 0;
-
-    // First calculate the base Cost considering if the entered cost includes IVA
     const actualCost = item.taxMode === "gross" ? item.cost / (1 + IVA_PERCENTAGE) : item.cost;
 
     if (mode === "manual") {
-      // In manual mode, we just look at the typedPrice and taxMode
       basePrice = item.taxMode === "gross" ? item.typedPrice / (1 + IVA_PERCENTAGE) : item.typedPrice;
-      
-      // Auto-calculate the resulting margin just for UI context, even though it's not the driver
       if (actualCost > 0) {
         item.margin = ((basePrice - actualCost) / actualCost) * 100;
       }
     } else {
-      // Both individual_margin and global_margin calculate price from Cost + Margin
       const activeMargin = mode === "global_margin" ? gMargin : item.margin;
       basePrice = actualCost * (1 + activeMargin / 100);
-      
-      // Auto-calculate what the typedPrice visually represents
       item.typedPrice = item.taxMode === "gross" ? basePrice * (1 + IVA_PERCENTAGE) : basePrice;
     }
 
@@ -132,7 +131,6 @@ export default function CreateSale() {
     };
   }, []);
 
-  // Recalculate all items when global margin changes
   useEffect(() => {
     if (pricingMode === "global_margin") {
       setItems((prevItems) =>
@@ -166,6 +164,7 @@ export default function CreateSale() {
       satProductKey: "",
       satUnitKey: "",
       description: "",
+      showDetails: false
     };
     setItems([...items, newItem]);
   };
@@ -189,7 +188,7 @@ export default function CreateSale() {
     const dbPrice = product?.price || 0;
     const dbCost = product?.cost || 0;
 
-    if (product?.stock == 0) {
+    if (product?.stock === 0) {
       toast.error(`El producto ${product.name} no tiene existencias`);
       return;
     }
@@ -197,7 +196,6 @@ export default function CreateSale() {
     setItems((prevItems) => {
       const newItems = [...prevItems];
       const currentItem = newItems[index];
-      
       const updatedItem = {
         ...currentItem,
         productId,
@@ -207,7 +205,6 @@ export default function CreateSale() {
         cost: dbCost, 
         typedPrice: dbPrice,
       };
-      
       newItems[index] = calculateItemMath(updatedItem, pricingMode, globalMargin);
       return newItems;
     });
@@ -254,7 +251,6 @@ export default function CreateSale() {
     try {
       const saleData = {
         customerId: selectedCustomer,
-        // Enviar SOLAMENTE precio base real a la API
         saleItems: items.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
@@ -274,15 +270,10 @@ export default function CreateSale() {
       });
 
       const responseData = await res.json();
-
-      if (!res.ok) {
-        throw new Error(responseData.error || "Error al crear la venta");
-      }
+      if (!res.ok) throw new Error(responseData.error || "Error al crear la venta");
 
       toast.success("¡Venta creada exitosamente!");
-      setTimeout(() => {
-        router.push("/dashboard/sales");
-      }, 1500);
+      setTimeout(() => { router.push("/dashboard/sales"); }, 1500);
     } catch (err) {
       console.error("Error creando venta:", err);
       const errorMessage = err instanceof Error ? err.message : "Error al crear la venta";
@@ -294,520 +285,383 @@ export default function CreateSale() {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("es-MX", {
-      style: "currency",
-      currency: "MXN",
-    }).format(amount);
+    return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(amount);
   };
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">Cargando datos de venta...</p>
-        </div>
-      </div>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
+        <CircularProgress size={40} sx={{ color: '#334155' }} />
+      </Box>
     );
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300 max-w-6xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Crear Nueva Venta</h1>
-          <p className="text-gray-600">Completa el formulario para registrar una nueva venta</p>
-        </div>
+    <Box sx={{ maxWidth: 1200, mx: "auto", py: 6, px: 3, animation: 'fadeIn 0.3s ease' }}>
+      <style jsx global>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
 
-        <button
-          onClick={() => router.back()}
-          className="bg-gradient-to-r from-gray-500 to-gray-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:from-gray-600 hover:to-gray-700 transition-all duration-200 flex items-center gap-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          Cancelar
-        </button>
-      </div>
+      {/* Header */}
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 6, flexWrap: "wrap", gap: 3 }}>
+        <Box>
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center", mb: 1 }}>
+            <IconButton onClick={() => router.back()} size="small" sx={{ color: '#64748b', '&:hover': { bgcolor: '#f1f5f9' } }}>
+              <ArrowLeft size={18} />
+            </IconButton>
+            <Typography variant="h4" sx={{ fontWeight: 700, color: '#1e293b', letterSpacing: '-0.02em' }}>
+              Nueva Venta
+            </Typography>
+          </Stack>
+          <Typography sx={{ color: '#64748b', fontSize: '0.95rem', ml: 4 }}>
+            Registra una nueva transacción de venta
+          </Typography>
+        </Box>
+        <Stack direction="row" spacing={2}>
+          <Button
+            variant="outlined"
+            onClick={() => router.back()}
+            sx={{ 
+              height: 42,
+              borderRadius: 1.5, 
+              padding: '9px 24px', 
+              borderColor: '#cbd5e1', 
+              color: '#475569', 
+              textTransform: 'none', 
+              fontWeight: 600
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSubmit}
+            disabled={loading || items.length === 0 || !selectedCustomer}
+            startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <Save size={18} strokeWidth={1.5} />}
+            sx={{ 
+              height: 42,
+              borderRadius: 1.5, 
+              padding: '9px 24px', 
+              bgcolor: '#334155', 
+              '&:hover': { bgcolor: '#1e293b' }, 
+              textTransform: 'none', 
+              boxShadow: 'none', 
+              fontWeight: 600
+            }}
+          >
+            {loading ? "Guardando..." : "Finalizar Venta"}
+          </Button>
+        </Stack>
+      </Box>
 
       {error && (
-        <div className="bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl">
-          <div className="flex items-center gap-3">
-            <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>{error}</span>
-          </div>
-        </div>
+        <Alert severity="error" icon={<AlertTriangle size={18} />} sx={{ mb: 4, borderRadius: 2 }}>
+          {error}
+        </Alert>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Global Configuration Banner for Sales */}
-        <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-2xl shadow-sm border border-indigo-100 p-6">
-          <h3 className="text-lg font-bold text-indigo-900 mb-4 flex items-center gap-2">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            Configuración Global de Precios
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-            <div>
-              <label className="block text-sm font-semibold text-indigo-900 mb-2">
-                Modo de Cálculo de Precios
-              </label>
-              <select
-                value={pricingMode}
-                onChange={(e) => handleModeChange(e.target.value as PricingMode)}
-                className="w-full border border-indigo-200 rounded-xl px-4 py-3 bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent cursor-pointer shadow-sm"
-              >
-                <option value="manual">Modo Manual: Escribir Precios Finales</option>
-                <option value="individual_margin">Modo Detallado: Costo + Margen por Producto</option>
-                <option value="global_margin">Modo Global: Costos + Margen Único General</option>
-              </select>
-              <p className="text-xs text-indigo-600 mt-2">
-                {pricingMode === "manual" && "Escribe los precios de venta directamente. Ignora los costos."}
-                {pricingMode === "individual_margin" && "Tus precios se calcularán automáticamente basados en el Costo y Margen de cada línea."}
-                {pricingMode === "global_margin" && "Todos los precios se calcularán usando el Margen Global aplicado al costo de cada producto."}
-              </p>
-            </div>
-            {pricingMode === "global_margin" && (
-              <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-                <label className="block text-sm font-semibold text-indigo-900 mb-2">
-                  Margen Global (%)
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={globalMargin}
-                    onChange={(e) => setGlobalMargin(Number(e.target.value))}
-                    className="w-full border border-indigo-200 rounded-xl px-4 py-3 bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-sm pr-10"
-                  />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">%</span>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+      {/* Configuration & Customer Selection Grid */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        {/* Pricing Config */}
+        <Grid size={{ xs: 12, lg: 6 }}>
+          <Paper variant="outlined" sx={{ p: 3, borderRadius: 2, height: '100%', borderColor: '#e2e8f0', bgcolor: '#f8fafc' }}>
+            <Box sx={{ display: "flex", alignItems: "center", mb: 2.5, gap: 1 }}>
+              <Settings2 size={18} strokeWidth={1.5} color="#64748b" />
+              <Typography sx={{ color: '#475569', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Esquema de Precios
+              </Typography>
+            </Box>
+            <Stack spacing={2}>
+              <FormControl fullWidth size="small">
+                <Select
+                  value={pricingMode}
+                  onChange={(e) => handleModeChange(e.target.value as PricingMode)}
+                  sx={{ bgcolor: 'white', borderRadius: 1.5 }}
+                >
+                  <MenuItem value="manual">Modo Manual: Precios Finales</MenuItem>
+                  <MenuItem value="individual_margin">Detallado: Margen por Item</MenuItem>
+                  <MenuItem value="global_margin">Global: Margen General</MenuItem>
+                </Select>
+              </FormControl>
+              {pricingMode === "global_margin" && (
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Margen Global (%)"
+                  type="number"
+                  value={globalMargin}
+                  onChange={(e) => setGlobalMargin(Number(e.target.value))}
+                  slotProps={{
+                    input: {
+                      endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                      sx: { bgcolor: 'white', borderRadius: 1.5 }
+                    }
+                  }}
+                />
+              )}
+            </Stack>
+          </Paper>
+        </Grid>
 
-        {/* Sección de cliente */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-xl flex items-center justify-center">
-              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-800">Datos del Cliente</h2>
-              <p className="text-gray-600">Selecciona el cliente para esta venta</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Buscar Cliente *</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
-                <input
-                  type="text"
+        {/* Customer Search & Select */}
+        <Grid size={{ xs: 12, lg: 6 }}>
+          <Paper variant="outlined" sx={{ p: 3, borderRadius: 2, height: '100%', borderColor: '#e2e8f0' }}>
+            <Box sx={{ display: "flex", alignItems: "center", mb: 2.5, gap: 1 }}>
+              <User size={18} strokeWidth={1.5} color="#64748b" />
+              <Typography sx={{ color: '#475569', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Cliente *
+              </Typography>
+            </Box>
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  placeholder="Buscar RFC o Nombre..."
                   value={customerSearch}
                   onChange={(e) => setCustomerSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:ring-opacity-50 transition-all duration-200 outline-none"
-                  placeholder="Buscar por nombre, email o RFC..."
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Seleccionar Cliente *</label>
-              <select
-                value={selectedCustomer}
-                onChange={(e) => setSelectedCustomer(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:ring-opacity-50 transition-all duration-200 outline-none appearance-none bg-gradient-to-r from-gray-50 to-white"
-                required
-              >
-                <option value="">Selecciona un cliente</option>
-                {filteredCustomers.map((customer) => (
-                  <option key={customer.id} value={customer.id} className="py-2">
-                    {customer.name} {customer.email && `(${customer.email})`}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {selectedCustomerData && (
-            <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center text-white font-bold">
-                    {selectedCustomerData.name?.[0]?.toUpperCase()}
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-800">{selectedCustomerData.name}</h3>
-                    <p className="text-sm text-gray-600">
-                      {selectedCustomerData.email && `${selectedCustomerData.email} • `}
-                      {selectedCustomerData.rfc && `RFC: ${selectedCustomerData.rfc}`}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedCustomer("");
-                    setCustomerSearch("");
+                  slotProps={{
+                    input: {
+                      startAdornment: <InputAdornment position="start"><Search size={18} color="#94a3b8" /></InputAdornment>,
+                      sx: { borderRadius: 1.5, bgcolor: '#f8fafc' }
+                    }
                   }}
-                  className="text-red-600 hover:text-red-800"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <FormControl fullWidth size="small">
+                  <Select
+                    value={selectedCustomer}
+                    onChange={(e) => setSelectedCustomer(e.target.value)}
+                    displayEmpty
+                    sx={{ borderRadius: 1.5 }}
+                  >
+                    <MenuItem value=""><em>Seleccionar...</em></MenuItem>
+                    {filteredCustomers.map((c) => (
+                      <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+            {selectedCustomerData && (
+              <Box sx={{ mt: 2, p: 1.5, bgcolor: '#fbfcfd', borderRadius: 1.5, border: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155' }}>
+                  {selectedCustomerData.name} <Box component="span" sx={{ color: '#94a3b8', ml: 1, fontWeight: 400 }}>{selectedCustomerData.rfc || "Sin RFC"}</Box>
+                </Typography>
+                <IconButton size="small" onClick={() => setSelectedCustomer("")} sx={{ color: '#94a3b8' }}><X size={14} /></IconButton>
+              </Box>
+            )}
+          </Paper>
+        </Grid>
+      </Grid>
 
-        {/* Sección de productos */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gradient-to-r from-green-100 to-emerald-100 rounded-xl flex items-center justify-center">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-800">Productos de la Venta</h2>
-                <p className="text-gray-600">
-                  {items.length > 0
-                    ? `${items.length} producto(s) agregado(s) - ${totalItems} unidades totales`
-                    : "Agrega los productos que se incluirán en la venta"}
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={addItem}
-              className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:from-green-700 hover:to-emerald-700 transition-all duration-200 flex items-center gap-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Agregar Producto
-            </button>
-          </div>
-
-          <div className="mb-6">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Buscar Productos (Opcional)</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-              <input
-                type="text"
-                value={productSearch}
-                onChange={(e) => setProductSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl bg-white focus:border-green-500 focus:ring-2 focus:ring-green-200 focus:ring-opacity-50 transition-all duration-200 outline-none"
-                placeholder="Filtra las opciones de los listados desplegables por nombre o SKU..."
-              />
-            </div>
-          </div>
-
-          {items.map((item, index) => {
-            const product = products.find((p) => p.id === item.productId);
-            return (
-              <div
-                key={index}
-                className="mb-6 p-6 border border-gray-200 rounded-xl bg-gradient-to-br from-gray-50 to-white hover:shadow-md transition-all duration-300 group relative"
-              >
-                <button
-                  type="button"
-                  onClick={() => removeItem(index)}
-                  className="absolute -top-3 -right-3 w-8 h-8 bg-red-100 text-red-600 rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:text-white"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-
-                <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 mb-4">
-                  {/* Select Product - 4 columns */}
-                  <div className="xl:col-span-4">
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Producto *</label>
-                    <div className="flex items-center gap-2 mb-2">
-                       {product?.stock !== undefined && (
-                         <span className={`text-xs font-bold px-2 py-1 rounded ${product.stock <= 5 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-                           Stock: {product.stock}
-                         </span>
-                       )}
-                    </div>
-                    <select
-                      value={item.productId}
-                      onChange={(e) => handleProductChange(index, e.target.value)}
-                      className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm bg-white"
-                      required
-                    >
-                      <option value="">Buscar o seleccionar producto...</option>
-                      {filteredProducts.map((p) => (
-                        <option
-                          key={p.id}
-                          value={p.id}
-                          className={`py-2 ${p.stock === 0 ? "text-red-600 bg-red-50" : ""}`}
-                          disabled={p.stock === 0}
+      {/* Items Table Container */}
+      <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, borderColor: '#e2e8f0', mb: 4, overflow: 'visible' }}>
+        <Table sx={{ minWidth: 800 }}>
+          <TableHead sx={{ bgcolor: '#f8fafc' }}>
+            <TableRow>
+              <TableCell sx={{ color: '#64748b', fontWeight: 700, fontSize: '0.7rem', textTransform: 'uppercase', py: 2 }}>Producto</TableCell>
+              <TableCell sx={{ color: '#64748b', fontWeight: 700, fontSize: '0.7rem', textTransform: 'uppercase', py: 2, width: 90 }}>Cant</TableCell>
+              <TableCell sx={{ color: '#64748b', fontWeight: 700, fontSize: '0.7rem', textTransform: 'uppercase', py: 2, width: 120 }}>Impuesto</TableCell>
+              {pricingMode !== "manual" && (
+                <TableCell sx={{ color: '#64748b', fontWeight: 700, fontSize: '0.7rem', textTransform: 'uppercase', py: 2, width: 120 }}>Costo</TableCell>
+              )}
+              {pricingMode === "individual_margin" && (
+                <TableCell sx={{ color: '#64748b', fontWeight: 700, fontSize: '0.7rem', textTransform: 'uppercase', py: 2, width: 90 }}>Margen%</TableCell>
+              )}
+              <TableCell sx={{ color: '#64748b', fontWeight: 700, fontSize: '0.7rem', textTransform: 'uppercase', py: 2, width: 140 }}>Precio Unit.</TableCell>
+              <TableCell align="right" sx={{ color: '#64748b', fontWeight: 700, fontSize: '0.7rem', textTransform: 'uppercase', py: 2, width: 140 }}>Total</TableCell>
+              <TableCell sx={{ py: 2, width: 50 }} />
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {items.map((item, index) => {
+              const product = products.find(p => p.id === item.productId);
+              return (
+                <React.Fragment key={index}>
+                  <TableRow sx={{ '&:hover': { bgcolor: '#fbfcfd' } }}>
+                    <TableCell sx={{ py: 1.5 }}>
+                      <FormControl fullWidth size="small">
+                        <Select
+                          value={item.productId}
+                          onChange={(e) => handleProductChange(index, e.target.value)}
+                          displayEmpty
+                          sx={{ borderRadius: 1.5, bgcolor: '#fff' }}
                         >
-                          {p.name} {p.sku && `(${p.sku})`} {p.stock !== undefined && ` - Stock: ${p.stock}`}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Quantity - 1 column */}
-                  <div className="xl:col-span-1">
-                    <label className="block text-sm font-semibold text-gray-700 mb-[34px]">Cant *</label>
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={item.quantity || ""}
-                      onChange={(e) => updateItem(index, "quantity", Number(e.target.value))}
-                      className="w-full border border-gray-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-blue-500 shadow-sm bg-white text-center"
-                      required
-                    />
-                  </div>
-
-                  {/* Calculator Math Columns - 7 cols */}
-                  <div className="xl:col-span-7 grid grid-cols-2 sm:grid-cols-4 gap-4 bg-white p-3 mt-4 xl:mt-0 xl:mb-0 rounded-xl border border-gray-100 shadow-inner place-content-end">
-                    
-                    {/* Tax Selector (Always Visible) */}
-                    <div className="col-span-1">
-                      <label className="block text-xs font-semibold text-gray-500 mb-1">Impuestos</label>
-                      <select
-                        value={item.taxMode}
-                        onChange={(e) => updateItem(index, "taxMode", e.target.value)}
-                        className="w-full border-b border-gray-300 py-1 text-sm text-gray-700 focus:outline-none focus:border-blue-500 bg-transparent"
-                      >
-                        <option value="net">Sin IVA</option>
-                        <option value="gross">Con IVA</option>
-                      </select>
-                    </div>
-
-                    {/* Cost Input (Only in margin modes) */}
-                    {pricingMode !== "manual" && (
-                      <div className="col-span-1">
-                        <label className="block text-xs font-semibold text-gray-500 mb-1">Costo</label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={item.cost || ""}
-                          onChange={(e) => updateItem(index, "cost", Number(e.target.value))}
-                          className="w-full border-b border-gray-300 py-1 text-sm focus:outline-none focus:border-blue-500 bg-transparent text-right"
-                          placeholder="0.00"
-                        />
-                      </div>
-                    )}
-
-                    {/* Margin Input (Only in individual margin mode) */}
-                    {pricingMode === "individual_margin" && (
-                      <div className="col-span-1 border-l border-gray-100 pl-3">
-                        <label className="block text-xs font-semibold text-gray-500 mb-1">Margen %</label>
-                        <input
-                          type="number"
-                          step="0.1"
-                          value={item.margin || ""}
-                          onChange={(e) => updateItem(index, "margin", Number(e.target.value))}
-                          className="w-full border-b border-gray-300 py-1 text-sm font-semibold text-indigo-600 focus:outline-none focus:border-blue-500 bg-transparent text-right"
-                          placeholder="0.0"
-                        />
-                      </div>
-                    )}
-
-                    {/* Price Input (Manual only. Auto-calculated/Read-only in Margin modes) */}
-                    <div className={pricingMode === "manual" ? "col-span-2" : "col-span-1"}>
-                      <label className={`block text-xs font-semibold mb-1 ${pricingMode === "manual" ? "text-gray-700" : "text-gray-500"}`}>
-                        Precio {item.taxMode === "gross" ? "(C/IVA)" : "(Base)"}
-                      </label>
-                      <input
+                          <MenuItem value=""><em>Seleccionar producto...</em></MenuItem>
+                          {filteredProducts.map(p => (
+                            <MenuItem key={p.id} value={p.id} disabled={p.stock === 0}>
+                              {p.name} {p.sku ? `(${p.sku})` : ""} — ${p.price}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      {product && (
+                        <Typography sx={{ fontSize: '0.65rem', mt: 0.5, px: 1, fontWeight: 700, color: product.stock === 0 ? '#ef4444' : '#16a34a' }}>
+                           Stock: {product.stock} {product.saleUnit || 'uds'}
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell sx={{ py: 1.5 }}>
+                      <TextField
+                        size="small"
                         type="number"
-                        min="0"
-                        step="0.01"
-                        value={pricingMode === "manual" ? (item.typedPrice || "") : item.typedPrice.toFixed(2)}
-                        onChange={(e) => pricingMode === "manual" && updateItem(index, "typedPrice", Number(e.target.value))}
-                        readOnly={pricingMode !== "manual"}
-                        className={`w-full border-b border-gray-300 py-1 text-sm text-right focus:outline-none focus:border-blue-500 bg-transparent ${pricingMode !== "manual" ? "text-gray-400 font-mono" : "font-bold text-gray-800"}`}
-                        placeholder="0.00"
+                        value={item.quantity}
+                        onChange={(e) => updateItem(index, 'quantity', Number(e.target.value))}
+                        slotProps={{ input: { sx: { borderRadius: 1.5, bgcolor: '#fff', textAlign: 'center' } } }}
                       />
-                    </div>
-
-                    {/* Total purely for visual reference */}
-                    <div className={pricingMode === "global_margin" ? "col-span-2 border-l border-gray-100 pl-3" : "col-span-1 border-l border-gray-100 pl-3"}>
-                      <label className="block text-xs font-semibold text-gray-400 mb-1">Total (P.Base)</label>
-                      <input
-                        type="text"
-                        value={formatCurrency(item.totalPrice)}
-                        className="w-full py-1 text-sm font-bold text-gray-800 bg-transparent text-right outline-none"
-                        readOnly
-                        tabIndex={-1}
+                    </TableCell>
+                    <TableCell sx={{ py: 1.5 }}>
+                      <Select
+                        fullWidth
+                        size="small"
+                        value={item.taxMode}
+                        onChange={(e) => updateItem(index, 'taxMode', e.target.value as TaxMode)}
+                        sx={{ borderRadius: 1.5, bgcolor: '#fff' }}
+                      >
+                        <MenuItem value="net">Sin IVA</MenuItem>
+                        <MenuItem value="gross">Con IVA</MenuItem>
+                      </Select>
+                    </TableCell>
+                    {pricingMode !== "manual" && (
+                      <TableCell sx={{ py: 1.5 }}>
+                        <TextField
+                          size="small"
+                          type="number"
+                          value={item.cost}
+                          onChange={(e) => updateItem(index, 'cost', Number(e.target.value))}
+                          slotProps={{ input: { sx: { borderRadius: 1.5, bgcolor: '#fff' } } }}
+                        />
+                      </TableCell>
+                    )}
+                    {pricingMode === "individual_margin" && (
+                      <TableCell sx={{ py: 1.5 }}>
+                        <TextField
+                          size="small"
+                          type="number"
+                          value={item.margin}
+                          onChange={(e) => updateItem(index, 'margin', Number(e.target.value))}
+                          slotProps={{ input: { sx: { borderRadius: 1.5, bgcolor: '#fff' } } }}
+                        />
+                      </TableCell>
+                    )}
+                    <TableCell sx={{ py: 1.5 }}>
+                      <TextField
+                        size="small"
+                        type="number"
+                        value={pricingMode === 'manual' ? item.typedPrice : item.typedPrice.toFixed(2)}
+                        onChange={(e) => pricingMode === 'manual' && updateItem(index, 'typedPrice', Number(e.target.value))}
+                        slotProps={{ 
+                          input: { 
+                            readOnly: pricingMode !== 'manual',
+                            sx: { borderRadius: 1.5, bgcolor: pricingMode !== 'manual' ? '#f8fafc' : '#fff', fontWeight: 700 } 
+                          } 
+                        }}
                       />
-                    </div>
-                  </div>
-                </div>
+                    </TableCell>
+                    <TableCell align="right" sx={{ py: 1.5 }}>
+                      <Typography sx={{ fontWeight: 800, color: '#1e293b' }}>
+                        {formatCurrency(item.totalPrice)}
+                      </Typography>
+                    </TableCell>
+                    <TableCell sx={{ py: 1.5 }}>
+                      <IconButton size="small" onClick={() => removeItem(index)} sx={{ color: '#cbd5e1', '&:hover': { color: '#ef4444' } }}>
+                        <Trash2 size={18} />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell colSpan={pricingMode === "manual" ? 6 : (pricingMode === "individual_margin" ? 8 : 7)} sx={{ p: 0, borderBottom: 'none' }}>
+                       <Box sx={{ px: 2, pb: 2 }}>
+                          <Button
+                            variant="text"
+                            size="small"
+                            onClick={() => updateItem(index, 'showDetails', !item.showDetails)}
+                            startIcon={item.showDetails ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                            sx={{ color: '#94a3b8', fontSize: '0.65rem', textTransform: 'uppercase', fontWeight: 700, p: 0 }}
+                          >
+                             Detalles SAT / Extra
+                          </Button>
+                          <Collapse in={item.showDetails}>
+                             <Grid container spacing={2} sx={{ mt: 1, pb: 2 }}>
+                                <Grid size={{ xs: 4, md: 2 }}><TextField fullWidth size="small" label="Clave SAT" value={item.satProductKey || ""} onChange={(e) => updateItem(index, 'satProductKey', e.target.value)} /></Grid>
+                                <Grid size={{ xs: 4, md: 2 }}><TextField fullWidth size="small" label="Unidad SAT" value={item.satUnitKey || ""} onChange={(e) => updateItem(index, 'satUnitKey', e.target.value)} /></Grid>
+                                <Grid size={{ xs: 8, md: 8 }}><TextField fullWidth size="small" label="Descripción Comercial" value={item.description || ""} onChange={(e) => updateItem(index, 'description', e.target.value)} /></Grid>
+                             </Grid>
+                          </Collapse>
+                       </Box>
+                    </TableCell>
+                  </TableRow>
+                </React.Fragment>
+              );
+            })}
+            {items.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={10} align="center" sx={{ py: 6 }}>
+                   <Box sx={{ color: '#cbd5e1', mb: 1 }}><ShoppingBag size={40} strokeWidth={1} /></Box>
+                   <Typography sx={{ color: '#94a3b8', fontSize: '0.875rem' }}>No hay productos agregados a la venta</Typography>
+                </TableCell>
+              </TableRow>
+            )}
+            <TableRow>
+              <TableCell colSpan={10} sx={{ py: 2 }}>
+                <Button
+                  variant="text"
+                  startIcon={<Plus size={18} />}
+                  onClick={addItem}
+                  sx={{ color: '#334155', fontWeight: 700, textTransform: 'none', '&:hover': { bgcolor: '#f1f5f9' } }}
+                >
+                  Agregar Item
+                </Button>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </TableContainer>
 
-                {/* Campos SAT Expendables */}
-                <details className="mt-4 group/details">
-                  <summary className="text-sm font-medium text-gray-500 cursor-pointer hover:text-blue-600 flex items-center gap-1 select-none">
-                    <svg className="w-4 h-4 transition-transform group-open/details:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                    </svg>
-                    Más detalles (SAT / Descripción)
-                  </summary>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-200">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Clave Producto SAT</label>
-                      <input
-                        type="text"
-                        value={item.satProductKey || ""}
-                        onChange={(e) => updateItem(index, "satProductKey", e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-200 transition-all duration-200 outline-none"
-                        placeholder="Clave SAT"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Clave Unidad SAT</label>
-                      <input
-                        type="text"
-                        value={item.satUnitKey || ""}
-                        onChange={(e) => updateItem(index, "satUnitKey", e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-200 transition-all duration-200 outline-none"
-                        placeholder="Clave unidad"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Descripción para Factura</label>
-                      <input
-                        type="text"
-                        value={item.description || ""}
-                        onChange={(e) => updateItem(index, "description", e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-200 transition-all duration-200 outline-none"
-                        placeholder="Descripción detallada"
-                      />
-                    </div>
-                  </div>
-                </details>
-
-              </div>
-            );
-          })}
-
-          {items.length === 0 && (
-            <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-xl">
-              <div className="w-20 h-20 mx-auto mb-4 text-gray-300">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-700 mb-2">No hay productos agregados</h3>
-              <p className="text-gray-500 mb-6">Haz clic en Agregar Producto para comenzar a añadir productos a la venta</p>
-            </div>
-          )}
-        </div>
-
-        {/* Sección de notas */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl flex items-center justify-center">
-              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-800">Notas Adicionales</h2>
-              <p className="text-gray-600">Información adicional sobre la venta (opcional)</p>
-            </div>
-          </div>
-          <textarea
+      {/* Footer Grid */}
+      <Grid container spacing={3}>
+        <Grid size={{ xs: 12, md: 7 }}>
+          <TextField
+            fullWidth
+            multiline
+            rows={4}
+            label="Notas Adicionales"
+            placeholder="Términos de pago, condiciones de entrega, etc..."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:ring-opacity-50 transition-all duration-200 outline-none min-h-[120px]"
-            rows={3}
-            placeholder="Escribe aquí cualquier información adicional sobre la venta, condiciones especiales, términos de pago, etc..."
+            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2, bgcolor: '#fff' } }}
           />
-        </div>
-
-        {/* Resumen y botones */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6">
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-            <div className="flex-1 w-full lg:w-1/2">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Resumen de la Venta</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl">
-                  <p className="text-sm text-gray-600 mb-1">Productos</p>
-                  <p className="text-xl font-bold text-gray-800">{items.length}</p>
-                </div>
-                <div className="bg-gradient-to-r from-teal-50 to-green-50 p-4 rounded-xl">
-                  <p className="text-sm text-gray-600 mb-1">Unidades</p>
-                  <p className="text-xl font-bold text-gray-800">{totalItems}</p>
-                </div>
-                <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-xl">
-                  <p className="text-sm text-gray-600 mb-1">IVA (16%)</p>
-                  <p className="text-xl font-bold text-amber-600">{formatCurrency(ivaAmount)}</p>
-                </div>
-                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 p-4 rounded-xl border border-emerald-100 shadow-sm">
-                  <p className="text-sm text-gray-600 mb-1">Total</p>
-                  <p className="text-xl font-black text-emerald-700">{formatCurrency(totalAmountWithIVA)}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto mt-4 lg:mt-0">
-              <button
-                type="button"
-                onClick={() => router.back()}
-                className="bg-gradient-to-r from-gray-500 to-gray-600 text-white px-8 py-3.5 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:from-gray-600 hover:to-gray-700 transition-all duration-200 flex items-center justify-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={loading || items.length === 0 || !selectedCustomer}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-3.5 rounded-xl font-bold shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? (
-                  <>
-                    <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Guardando...
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                    Confirmar Venta
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      </form>
-    </div>
+        </Grid>
+        <Grid size={{ xs: 12, md: 5 }}>
+          <Paper variant="outlined" sx={{ p: 4, borderRadius: 3, borderLeft: '6px solid #334155', bgcolor: '#fff' }}>
+             <Stack spacing={2}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography sx={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>Subtotal</Typography>
+                  <Typography sx={{ fontWeight: 700, color: '#1e293b' }}>{formatCurrency(totalAmountWithoutIVA)}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography sx={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>IVA (16%)</Typography>
+                  <Typography sx={{ fontWeight: 700, color: '#eab308' }}>{formatCurrency(ivaAmount)}</Typography>
+                </Box>
+                <Divider />
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', pt: 1 }}>
+                  <Box>
+                    <Typography sx={{ color: '#94a3b8', fontSize: '0.8rem', fontWeight: 900, textTransform: 'uppercase' }}>Total a Pagar</Typography>
+                    <Typography sx={{ color: '#64748b', fontSize: '0.75rem' }}>{totalItemsCount} unidades totales</Typography>
+                  </Box>
+                  <Typography variant="h3" sx={{ fontWeight: 900, color: '#16a34a', letterSpacing: '-0.03em' }}>
+                    {formatCurrency(totalAmountWithIVA)}
+                  </Typography>
+                </Box>
+             </Stack>
+          </Paper>
+        </Grid>
+      </Grid>
+    </Box>
   );
 }

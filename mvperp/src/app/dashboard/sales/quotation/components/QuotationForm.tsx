@@ -334,7 +334,7 @@ export default function QuotationForm({
       </Paper>
 
       {/* Main Fields */}
-      <Grid container spacing={3} mb={6}>
+      <Grid container spacing={3} sx={{ mb: 6 }}>
         <Grid size={{ xs: 12, md: 6 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
             <User size={14} color="#64748b" />
@@ -404,7 +404,7 @@ export default function QuotationForm({
                 <X size={16} />
               </IconButton>
               
-              <Grid container spacing={2} alignItems="flex-end">
+              <Grid container spacing={2} sx={{ alignItems: 'flex-end' }}>
                 <Grid size={{ xs: 12, md: 4 }}>
                   <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: '#94a3b8', fontWeight: 600 }}>PRODUCTO</Typography>
                   <FormControl fullWidth size="small">
@@ -486,7 +486,7 @@ export default function QuotationForm({
                 </Grid>
               </Grid>
 
-              <Box mt={2}>
+              <Box sx={{ mt: 2 }}>
                 <Button
                   size="small"
                   variant="text"
@@ -497,7 +497,7 @@ export default function QuotationForm({
                   Detalles Técnicos / SAT
                 </Button>
                 <Collapse in={item.showDetails}>
-                  <Grid container spacing={2} mt={1}>
+                  <Grid container spacing={2} sx={{ mt: 1 }}>
                     <Grid size={{ xs: 12, md: 4 }}>
                       <TextField fullWidth size="small" label="Clave SAT" value={item.satProductKey} onChange={(e) => updateItem(index, "satProductKey", e.target.value)} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }} />
                     </Grid>
@@ -515,7 +515,7 @@ export default function QuotationForm({
         </Box>
       )}
 
-      <Box mt={6}>
+      <Box sx={{ mt: 6 }}>
         <Typography variant="caption" sx={{ display: 'block', mb: 1, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Observaciones y Condiciones</Typography>
         <TextField
           fullWidth
@@ -529,27 +529,27 @@ export default function QuotationForm({
       </Box>
 
       {/* Summary Section - Professional Style */}
-      <Box mt={8} sx={{ p: 4, border: '1px solid #e2e8f0', borderRadius: 3, bgcolor: '#f8fafc' }}>
-        <Grid container spacing={4} alignItems="center">
+      <Box sx={{ mt: 8, p: 4, border: '1px solid #e2e8f0', borderRadius: 3, bgcolor: '#f8fafc' }}>
+        <Grid container spacing={4} sx={{ alignItems: 'center' }}>
           <Grid size={{ xs: 12, md: 6 }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <Box display="flex" justifyContent="space-between">
+              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                 <Typography sx={{ color: '#64748b', fontSize: '0.9rem' }}>Subtotal Neto</Typography>
                 <Typography sx={{ fontWeight: 500 }}>{formatCurrency(totalWithoutIVA)}</Typography>
               </Box>
-              <Box display="flex" justifyContent="space-between">
+              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                 <Typography sx={{ color: '#64748b', fontSize: '0.9rem' }}>Impuestos (16%)</Typography>
                 <Typography sx={{ fontWeight: 500 }}>{formatCurrency(iva)}</Typography>
               </Box>
               <Divider sx={{ my: 1 }} />
-              <Box display="flex" justifyContent="space-between">
+              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                 <Typography sx={{ color: '#1e293b', fontWeight: 700, fontSize: '1.1rem' }}>Total General</Typography>
                 <Typography sx={{ color: '#0f172a', fontWeight: 800, fontSize: '1.25rem' }}>{formatCurrency(totalWithIVA)}</Typography>
               </Box>
             </Box>
           </Grid>
           <Grid size={{ xs: 12, md: 6 }} sx={{ textAlign: 'right' }}>
-            <Box display="flex" gap={2} justifyContent="flex-end">
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
               <Button
                 variant="outlined"
                 onClick={() => router.back()}
