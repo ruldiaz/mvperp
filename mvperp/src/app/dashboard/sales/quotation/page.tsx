@@ -227,7 +227,7 @@ export default function Quotations() {
       </TableContainer>
 
       {pagination.totalPages > 1 && (
-        <Box display="flex" justifyContent="center" mt={6}>
+        <Box sx={{ display: "flex", justifyContent: "center", mt: 6 }}>
           <Pagination count={pagination.totalPages} page={pagination.page} onChange={handlePageChange} sx={{ '& .MuiPaginationItem-root': { borderRadius: 1.5 } }} />
         </Box>
       )}
