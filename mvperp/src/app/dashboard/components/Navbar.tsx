@@ -4,6 +4,25 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
+import {
+  Box,
+  Typography,
+  IconButton,
+  Avatar,
+  Menu,
+  MenuItem,
+  Badge,
+  Tooltip,
+  Divider,
+} from "@mui/material";
+import {
+  Bell,
+  LogOut,
+  User as UserIcon,
+  Settings,
+  ChevronDown,
+  Search,
+} from "lucide-react";
 
 export interface User {
   id: string;
@@ -17,8 +36,22 @@ interface NavbarProps {
 
 export default function Navbar({ user }: NavbarProps) {
   const router = useRouter();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [notifAnchorEl, setNotifAnchorEl] = useState<null | HTMLElement>(null);
+
+  const handleProfileOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+  const handleProfileClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleNotifOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setNotifAnchorEl(event.currentTarget);
+  };
+  const handleNotifClose = () => {
+    setNotifAnchorEl(null);
+  };
 
   const handleLogout = async () => {
     try {
@@ -26,99 +59,149 @@ export default function Navbar({ user }: NavbarProps) {
         method: "POST",
         credentials: "include",
       });
-
-      if (!res.ok) {
-        throw new Error();
+      if (res.ok) {
+        toast.success("Sesión cerrada");
+        router.push("/login");
       }
-
-      toast.success("Sesión cerrada exitosamente");
-      setMenuOpen(false);
-      router.push("/login");
     } catch {
       toast.error("Error al cerrar sesión");
     }
   };
 
+  const initials = user.name?.[0]?.toUpperCase() || user.email[0]?.toUpperCase();
+
   return (
-    <nav className="relative z-50 bg-gradient-to-r from-white to-gray-50 border-b border-gray-200 px-6 py-4 flex justify-between items-center shadow-sm">
-      {/* Título */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
-        <p className="text-sm text-gray-500">Bienvenido al panel de control</p>
-      </div>
+    <Box
+      component="nav"
+      sx={{
+        bgcolor: "white",
+        borderBottom: "1px solid #e2e8f0",
+        px: 4,
+        py: 2,
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        position: "sticky",
+        top: 0,
+        zIndex: 10,
+      }}
+    >
+      <Box>
+        <Typography variant="h6" sx={{ fontWeight: 700, color: "#1e293b", lineHeight: 1.2 }}>
+          Panel de Control
+        </Typography>
+        <Typography variant="caption" sx={{ color: "#64748b", fontWeight: 500 }}>
+          Resumen operativo del día
+        </Typography>
+      </Box>
 
-      {/* Controles */}
-      <div className="flex items-center gap-4">
-        {/* Notificaciones */}
-        <div className="relative">
-          <button
-            onClick={() => setNotificationsOpen(!notificationsOpen)}
-            className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors relative"
+      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+        {/* Search - Minimalist placeholder */}
+        <Box 
+          sx={{ 
+            display: { xs: "none", sm: "flex" }, 
+            alignItems: "center", 
+            gap: 1.5, 
+            px: 2, 
+            py: 1, 
+            bgcolor: "#f8fafc", 
+            borderRadius: 2, 
+            border: "1px solid #f1f5f9",
+            color: "#94a3b8",
+            mr: 2
+          }}
+        >
+          <Search size={16} />
+          <Typography sx={{ fontSize: "0.85rem" }}>Buscar transacciones...</Typography>
+        </Box>
+
+        {/* Notifications */}
+        <IconButton onClick={handleNotifOpen} sx={{ color: "#64748b", bgcolor: "#f8fafc", "&:hover": { bgcolor: "#f1f5f9" } }}>
+          <Badge badgeContent={3} color="error" sx={{ "& .MuiBadge-badge": { fontSize: '0.65rem', height: 16, minWidth: 16 } }}>
+            <Bell size={20} strokeWidth={2} />
+          </Badge>
+        </IconButton>
+        <Menu
+          anchorEl={notifAnchorEl}
+          open={Boolean(notifAnchorEl)}
+          onClose={handleNotifClose}
+          elevation={4}
+          sx={{ "& .MuiPaper-root": { width: 320, borderRadius: 2, mt: 1.5, border: "1px solid #e2e8f0" } }}
+        >
+          <Box sx={{ px: 2, py: 1.5 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Notificaciones</Typography>
+          </Box>
+          <Divider />
+          {[1, 2, 3].map((i) => (
+            <MenuItem key={i} onClick={handleNotifClose} sx={{ py: 1.5, display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+              <Typography variant="body2" fontWeight={600}>Nueva Cotización #{i}045</Typography>
+              <Typography variant="caption" color="text.secondary">Hace 15 minutos</Typography>
+            </MenuItem>
+          ))}
+        </Menu>
+
+        {/* User Profile */}
+        <Box 
+          onClick={handleProfileOpen}
+          sx={{ 
+            display: "flex", 
+            alignItems: "center", 
+            gap: 1.5, 
+            cursor: "pointer", 
+            pl: 1, 
+            py: 0.5, 
+            pr: 2, 
+            borderRadius: 2.5,
+            transition: "all 0.2s",
+            "&:hover": { bgcolor: "#f8fafc" }
+          }}
+        >
+          <Avatar 
+            sx={{ 
+              width: 36, 
+              height: 36, 
+              bgcolor: "#334155", 
+              fontSize: "0.9rem", 
+              fontWeight: 700 
+            }}
           >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-              />
-            </svg>
-            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-              3
-            </span>
-          </button>
+            {initials}
+          </Avatar>
+          <Box sx={{ display: { xs: "none", md: "block" } }}>
+            <Typography variant="body2" sx={{ fontWeight: 700, color: "#1e293b", lineHeight: 1.2 }}>
+              {user.name || "Usuario"}
+            </Typography>
+            <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+              Administrador
+            </Typography>
+          </Box>
+          <ChevronDown size={16} color="#94a3b8" />
+        </Box>
 
-          {notificationsOpen && (
-            <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border py-2 z-50">
-              <div className="px-4 py-3 border-b">
-                <h3 className="font-semibold">Notificaciones</h3>
-              </div>
-              {[1, 2, 3].map((item) => (
-                <div
-                  key={item}
-                  className="px-4 py-3 hover:bg-gray-50 border-b last:border-0"
-                >
-                  <p className="text-sm">Tienes una notificación pendiente</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Perfil */}
-        <div className="relative">
-          <button
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-100"
-          >
-            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold">
-                {user.name?.[0]?.toUpperCase() || user.email[0]?.toUpperCase()}
-              </span>
-            </div>
-            <div className="text-left">
-              <p className="font-medium">{user.name || "Usuario"}</p>
-              <p className="text-xs text-gray-500">{user.email}</p>
-            </div>
-          </button>
-
-          {menuOpen && (
-            <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border z-50">
-              <button
-                onClick={handleLogout}
-                className="w-full px-4 py-3 text-left text-red-600 hover:bg-red-50 cursor-pointer"
-              >
-                Cerrar sesión
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    </nav>
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleProfileClose}
+          elevation={4}
+          sx={{ "& .MuiPaper-root": { width: 220, borderRadius: 2, mt: 1.5, border: "1px solid #e2e8f0" } }}
+        >
+          <Box sx={{ px: 2, py: 1.5 }}>
+            <Typography variant="caption" color="text.secondary">MI CUENTA</Typography>
+            <Typography variant="body2" fontWeight={700} noWrap>{user.email}</Typography>
+          </Box>
+          <Divider />
+          <MenuItem onClick={() => { handleProfileClose(); router.push("/dashboard/profile"); }} sx={{ gap: 1.5, py: 1.2 }}>
+            <UserIcon size={16} /> <Typography variant="body2">Perfil Fiscal</Typography>
+          </MenuItem>
+          <MenuItem onClick={handleProfileClose} sx={{ gap: 1.5, py: 1.2 }}>
+            <Settings size={16} /> <Typography variant="body2">Ajustes</Typography>
+          </MenuItem>
+          <Divider />
+          <MenuItem onClick={handleLogout} sx={{ gap: 1.5, py: 1.2, color: "error.main" }}>
+            <LogOut size={16} /> <Typography variant="body2" fontWeight={600}>Cerrar Sesión</Typography>
+          </MenuItem>
+        </Menu>
+      </Box>
+    </Box>
   );
 }

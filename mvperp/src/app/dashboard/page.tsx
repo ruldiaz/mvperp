@@ -5,6 +5,16 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
+  Box,
+  Typography,
+  Button,
+  Paper,
+  Stack,
+  Divider,
+  alpha,
+  Grid,
+} from "@mui/material";
+import {
   DollarSign,
   Package,
   CheckCircle,
@@ -18,9 +28,10 @@ import {
   PackagePlus,
   Users,
   Clock,
+  ArrowRight,
 } from "lucide-react";
 
-interface User {
+interface UserInfo {
   id: string;
   email: string;
   name?: string;
@@ -28,7 +39,7 @@ interface User {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<UserInfo | null>(null);
   const [stats, setStats] = useState({
     totalSales: 0,
     activeProducts: 0,
@@ -47,8 +58,6 @@ export default function DashboardPage() {
       }
     };
     fetchUser();
-
-    // Simular carga de estadísticas
     setTimeout(() => {
       setStats({
         totalSales: 1245,
@@ -62,201 +71,140 @@ export default function DashboardPage() {
   if (!user) return null;
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      {/* Header de bienvenida */}
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            ¡Bienvenido de nuevo,{" "}
-            <span className="text-blue-600">
-              {user.name || user.email.split("@")[0]}
-            </span>
-            !
-          </h1>
-          <p className="text-gray-600">
-            Aquí tienes un resumen de tu negocio hoy{" "}
-            {new Date().toLocaleDateString("es-ES", {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-            .
-          </p>
-        </div>
-        <button className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 flex items-center gap-2">
-          <Plus className="w-5 h-5" />
+    <Box sx={{ animation: "fadeIn 0.5s ease" }}>
+      <style jsx global>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+
+      {/* Welcome Header */}
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 6, flexWrap: "wrap", gap: 3 }}>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 800, color: "#1e293b", letterSpacing: "-0.02em", mb: 1 }}>
+            ¡Bienvenido, <Box component="span" sx={{ color: "#334155" }}>{user.name || user.email.split("@")[0]}</Box>!
+          </Typography>
+          <Typography variant="body1" sx={{ color: "#64748b" }}>
+            Resumen operativo para hoy, {new Date().toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}.
+          </Typography>
+        </Box>
+        <Button
+          variant="contained"
+          startIcon={<Plus size={18} strokeWidth={2.5} />}
+          sx={{
+            bgcolor: "#334155",
+            color: "white",
+            px: 3,
+            py: 1.2,
+            borderRadius: 2,
+            textTransform: "none",
+            fontWeight: 700,
+            boxShadow: "none",
+            "&:hover": { bgcolor: "#1e293b", boxShadow: "none" },
+          }}
+        >
           Nueva Venta
-        </button>
-      </div>
+        </Button>
+      </Box>
 
-      {/* Estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Stats Grid */}
+      <Grid container spacing={3} sx={{ mb: 6 }}>
         {[
-          {
-            title: "Ventas Totales",
-            value: stats.totalSales,
-            change: "+12%",
-            color: "from-blue-500 to-cyan-500",
-            icon: <DollarSign className="w-6 h-6 text-white" />,
-          },
-          {
-            title: "Productos Activos",
-            value: stats.activeProducts,
-            change: "+5%",
-            color: "from-green-500 to-emerald-500",
-            icon: <Package className="w-6 h-6 text-white" />,
-          },
-          {
-            title: "Tareas Pendientes",
-            value: stats.pendingTasks,
-            change: "-3%",
-            color: "from-orange-500 to-amber-500",
-            icon: <CheckCircle className="w-6 h-6 text-white" />,
-          },
-          {
-            title: "Ingresos del Mes",
-            value: `$${stats.revenue.toLocaleString("es-MX")}`,
-            change: "+18%",
-            color: "from-purple-500 to-pink-500",
-            icon: <TrendingUp className="w-6 h-6 text-white" />,
-          },
-        ].map((stat, index) => (
-          <div
-            key={index}
-            className="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
-          >
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <p className="text-sm text-gray-500 font-medium">
-                  {stat.title}
-                </p>
-                <p className="text-3xl font-bold text-gray-800 mt-2">
-                  {stat.value}
-                </p>
-              </div>
-              <div
-                className={`w-12 h-12 bg-gradient-to-r ${stat.color} rounded-xl flex items-center justify-center shadow-md`}
-              >
-                {stat.icon}
-              </div>
-            </div>
-            <div className="flex items-center">
-              <span
-                className={`text-sm font-medium ${stat.change.startsWith("+") ? "text-green-600" : "text-red-600"}`}
-              >
-                {stat.change} este mes
-              </span>
-            </div>
-          </div>
+          { title: "Ventas Totales", value: stats.totalSales, change: "+12.5%", icon: <DollarSign size={22} />, color: "#3b82f6" },
+          { title: "Productos Activos", value: stats.activeProducts, change: "+2.1%", icon: <Package size={22} />, color: "#10b981" },
+          { title: "Tareas Pendientes", value: stats.pendingTasks, change: "-1", icon: <CheckCircle size={22} />, color: "#f59e0b" },
+          { title: "Ingresos (MXN)", value: `$${stats.revenue.toLocaleString("es-MX")}`, change: "+18.4%", icon: <TrendingUp size={22} />, color: "#8b5cf6" },
+        ].map((stat, idx) => (
+          <Grid key={idx} size={{ xs: 12, sm: 6, lg: 3 }}>
+            <Paper variant="outlined" sx={{ p: 3, borderRadius: 3, borderColor: "#e2e8f0", transition: "all 0.2s", "&:hover": { borderColor: "#94a3b8" } }}>
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
+                <Box>
+                  <Typography variant="caption" sx={{ color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>{stat.title}</Typography>
+                  <Typography variant="h5" sx={{ fontWeight: 800, color: "#1e293b", mt: 0.5 }}>{stat.value}</Typography>
+                </Box>
+                <Box sx={{ p: 1, borderRadius: 2, bgcolor: alpha(stat.color, 0.1), color: stat.color }}>{stat.icon}</Box>
+              </Box>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Typography variant="caption" sx={{ fontWeight: 700, color: stat.change.startsWith("+") ? "#166534" : "#991b1b", bgcolor: stat.change.startsWith("+") ? "#dcfce7" : "#fee2e2", px: 1, py: 0.2, borderRadius: 1 }}>
+                  {stat.change}
+                </Typography>
+                <Typography variant="caption" sx={{ color: "#94a3b8", fontWeight: 500 }}>vs. mes anterior</Typography>
+              </Box>
+            </Paper>
+          </Grid>
         ))}
-      </div>
+      </Grid>
 
-      {/* Acciones rápidas */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">
-          Acciones Rápidas
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            {
-              label: "Crear Producto",
-              icon: <PackagePlus className="w-6 h-6" />,
-              path: "/dashboard/products",
-              color: "bg-blue-100 text-blue-600",
-            },
-            {
-              label: "Nuevo Cliente",
-              icon: <User className="w-6 h-6" />,
-              path: "/dashboard/customers",
-              color: "bg-green-100 text-green-600",
-            },
-            {
-              label: "Generar Factura",
-              icon: <FileText className="w-6 h-6" />,
-              path: "/dashboard/invoices",
-              color: "bg-purple-100 text-purple-600",
-            },
-            {
-              label: "Ver Reportes",
-              icon: <BarChart3 className="w-6 h-6" />,
-              path: "/dashboard/reports",
-              color: "bg-orange-100 text-orange-600",
-            },
-          ].map((action, index) => (
-            <Link
-              key={index}
-              href={action.path}
-              className={`${action.color} p-4 rounded-xl hover:shadow-lg transition-all duration-200 hover:-translate-y-1 flex flex-col items-center justify-center text-center gap-2`}
-            >
-              {action.icon}
-              <span className="font-medium">{action.label}</span>
-            </Link>
-          ))}
-        </div>
-      </div>
+      <Grid container spacing={4}>
+        {/* Main Activity */}
+        <Grid size={{ xs: 12, md: 8 }}>
+          <Paper variant="outlined" sx={{ borderRadius: 3, borderColor: "#e2e8f0", overflow: "hidden" }}>
+            <Box sx={{ p: 3, display: "flex", justifyContent: "space-between", alignItems: "center", bgcolor: "#f8fafc" }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700, color: "#1e293b" }}>Actividad Reciente</Typography>
+              <Button size="small" endIcon={<ArrowRight size={14} />} sx={{ textTransform: "none", color: "#64748b" }}>Ver Historial</Button>
+            </Box>
+            <Divider />
+            <Box>
+              {[
+                { user: "Juan Pérez", action: "creó una nueva cotización", time: "Hace 2 horas", icon: <FileEdit size={18} /> },
+                { user: "María García", action: "realizó una venta de $1,250", time: "Hace 4 horas", icon: <ShoppingBag size={18} /> },
+                { user: "Pedro López", action: "actualizó el inventario", time: "Hace 6 horas", icon: <Package size={18} /> },
+                { user: "Ana Martínez", action: "agregó un nuevo cliente", time: "Hace 1 día", icon: <Users size={18} /> },
+              ].map((item, idx) => (
+                <Box key={idx} sx={{ p: 2.5, display: "flex", alignItems: "center", gap: 2.5, "&:hover": { bgcolor: "#fcfcfd" }, borderBottom: idx < 3 ? "1px solid #f1f5f9" : "none" }}>
+                  <Box sx={{ width: 40, height: 40, borderRadius: 2, bgcolor: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b" }}>
+                    {item.icon}
+                  </Box>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="body2" sx={{ color: "#1e293b" }}>
+                      <Box component="span" sx={{ fontWeight: 700 }}>{item.user}</Box> {item.action}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: "#94a3b8", display: "flex", alignItems: "center", gap: 0.5, mt: 0.2 }}>
+                      <Clock size={12} /> {item.time}
+                    </Typography>
+                  </Box>
+                  <Button variant="text" size="small" sx={{ textTransform: "none", color: "#475569", fontWeight: 600 }}>Detalles</Button>
+                </Box>
+              ))}
+            </Box>
+          </Paper>
+        </Grid>
 
-      {/* Últimas actividades */}
-      <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-lg">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-gray-800">
-            Actividad Reciente
-          </h2>
-          <button className="text-blue-600 hover:text-blue-800 font-medium transition-colors duration-200 flex items-center gap-1">
-            Ver todas <span>→</span>
-          </button>
-        </div>
-        <div className="space-y-4">
-          {[
-            {
-              user: "Juan Pérez",
-              action: "creó una nueva cotización",
-              time: "Hace 2 horas",
-              icon: <FileEdit className="w-5 h-5 text-gray-600" />,
-            },
-            {
-              user: "María García",
-              action: "realizó una venta de $1,250",
-              time: "Hace 4 horas",
-              icon: <ShoppingBag className="w-5 h-5 text-gray-600" />,
-            },
-            {
-              user: "Pedro López",
-              action: "actualizó el inventario",
-              time: "Hace 6 horas",
-              icon: <Package className="w-5 h-5 text-gray-600" />,
-            },
-            {
-              user: "Ana Martínez",
-              action: "agregó un nuevo cliente",
-              time: "Hace 1 día",
-              icon: <Users className="w-5 h-5 text-gray-600" />,
-            },
-          ].map((activity, index) => (
-            <div
-              key={index}
-              className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-xl transition-colors duration-200"
-            >
-              <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                {activity.icon}
-              </div>
-              <div className="flex-1">
-                <p className="text-gray-800">
-                  <span className="font-medium">{activity.user}</span>{" "}
-                  {activity.action}
-                </p>
-                <p className="text-sm text-gray-500 flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  {activity.time}
-                </p>
-              </div>
-              <button className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50 transition-colors duration-200">
-                Ver detalles
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
+        {/* Quick Actions */}
+        <Grid size={{ xs: 12, md: 4 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, color: "#1e293b", mb: 2, px: 1 }}>Accesos Directos</Typography>
+          <Stack spacing={2}>
+            {[
+              { label: "Catálogo de Productos", icon: <PackagePlus size={20} />, path: "/dashboard/products", color: "#3b82f6" },
+              { label: "Gestión de Clientes", icon: <User size={20} />, path: "/dashboard/customers", color: "#10b981" },
+              { label: "Facturación CFDI", icon: <FileText size={20} />, path: "/dashboard/invoices", color: "#8b5cf6" },
+              { label: "Reportes de Venta", icon: <BarChart3 size={20} />, path: "/dashboard/reports", color: "#f59e0b" },
+            ].map((action, idx) => (
+              <Paper
+                key={idx}
+                component={Link}
+                href={action.path}
+                variant="outlined"
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 2,
+                  textDecoration: "none",
+                  transition: "all 0.2s",
+                  "&:hover": { bgcolor: alpha(action.color, 0.04), borderColor: action.color, transform: "translateX(4px)" }
+                }}
+              >
+                <Box sx={{ color: action.color }}>{action.icon}</Box>
+                <Typography variant="body2" sx={{ fontWeight: 600, color: "#475569", flex: 1 }}>{action.label}</Typography>
+                <ArrowRight size={16} color="#cbd5e1" />
+              </Paper>
+            ))}
+          </Stack>
+        </Grid>
+      </Grid>
+    </Box>
   );
 }

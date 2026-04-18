@@ -1,4 +1,3 @@
-// src/app/dashboard/layout.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -6,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Toaster } from "react-hot-toast";
 import Navbar, { User } from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
+import { Box, CircularProgress, Typography } from "@mui/material";
 
 export default function DashboardLayout({
   children,
@@ -17,7 +17,6 @@ export default function DashboardLayout({
   const [isLoading, setIsLoading] = useState(true);
   const pathname = usePathname();
 
-  // Obtener usuario autenticado
   useEffect(() => {
     const fetchUser = async () => {
       try {
@@ -39,7 +38,6 @@ export default function DashboardLayout({
     fetchUser();
   }, []);
 
-  // Detectar la página activa basándose en la ruta
   useEffect(() => {
     if (pathname.includes("/products")) setSelectedPage("productos");
     else if (pathname.includes("/customers")) setSelectedPage("clientes");
@@ -54,60 +52,69 @@ export default function DashboardLayout({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">Cargando dashboard...</p>
-        </div>
-      </div>
+      <Box sx={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", bgcolor: "#f8fafc" }}>
+        <Box sx={{ textAlign: "center" }}>
+          <CircularProgress size={40} sx={{ color: "#334155", mb: 2 }} />
+          <Typography sx={{ color: "#64748b", fontWeight: 500 }}>Iniciando sesión segura...</Typography>
+        </Box>
+      </Box>
     );
   }
 
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-gray-50 to-blue-50/30">
+    <Box sx={{ minHeight: "100vh", display: "flex", bgcolor: "#f8fafc" }}>
       <Toaster position="top-right" />
 
-      {/* Sidebar */}
+      {/* Sidebar - Fixed width */}
       <Sidebar selectedPage={selectedPage} setSelectedPage={setSelectedPage} />
 
-      {/* Contenido principal */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Main Content Area */}
+      <Box sx={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         {/* Navbar */}
         <Navbar user={user} />
 
-        {/* Contenido dinámico */}
-        <main className="flex-1 p-6 overflow-auto">
-          <div className="max-w-7xl mx-auto">
-            <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200 p-6 animate-in fade-in duration-300">
+        {/* Dynamic Content */}
+        <Box component="main" sx={{ flex: 1, p: { xs: 2, md: 4, lg: 6 }, overflow: "auto" }}>
+          <Box sx={{ maxWidth: "1400px", mx: "auto" }}>
+            <Box 
+              sx={{ 
+                bgcolor: "white", 
+                borderRadius: 3, 
+                border: "1px solid #e2e8f0", 
+                p: { xs: 2, md: 4 },
+                boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)"
+              }}
+            >
               {children}
-            </div>
-          </div>
-        </main>
+            </Box>
+          </Box>
+        </Box>
 
-        {/* Footer del dashboard */}
-        <footer className="bg-white border-t border-gray-200 px-6 py-4">
-          <div className="flex justify-between items-center">
-            <p className="text-sm text-gray-500">
-              © {new Date().getFullYear()} ERP Software v1.0.0
-            </p>
-            <div className="flex items-center gap-4">
-              <button className="text-sm text-gray-500 hover:text-gray-700 transition-colors duration-200">
-                Ayuda
-              </button>
-              <button className="text-sm text-gray-500 hover:text-gray-700 transition-colors duration-200">
-                Términos
-              </button>
-              <button className="text-sm text-gray-500 hover:text-gray-700 transition-colors duration-200">
-                Privacidad
-              </button>
-            </div>
-          </div>
-        </footer>
-      </div>
-    </div>
+        {/* Dashboard Footer */}
+        <Box 
+          component="footer" 
+          sx={{ 
+            bgcolor: "white", 
+            borderTop: "1px solid #e2e8f0", 
+            px: 6, 
+            py: 3,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center"
+          }}
+        >
+          <Typography variant="caption" sx={{ color: "#94a3b8" }}>
+            © {new Date().getFullYear()} MVP ERP v1.2.0 • Terminal Segura
+          </Typography>
+          <Box sx={{ display: "flex", gap: 3 }}>
+            <Typography variant="caption" component="button" sx={{ color: "#94a3b8", border: "none", bgcolor: "transparent", cursor: "pointer", "&:hover": { color: "#475569" } }}>Ayuda</Typography>
+            <Typography variant="caption" component="button" sx={{ color: "#94a3b8", border: "none", bgcolor: "transparent", cursor: "pointer", "&:hover": { color: "#475569" } }}>Términos</Typography>
+            <Typography variant="caption" component="button" sx={{ color: "#94a3b8", border: "none", bgcolor: "transparent", cursor: "pointer", "&:hover": { color: "#475569" } }}>Privacidad</Typography>
+          </Box>
+        </Box>
+      </Box>
+    </Box>
   );
 }

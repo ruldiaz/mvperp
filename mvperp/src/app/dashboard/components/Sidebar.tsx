@@ -1,9 +1,22 @@
-// app/dashboard/components/Sidebar.tsx
+// src/app/dashboard/components/Sidebar.tsx
 "use client";
 
+import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { useState } from "react";
+import {
+  Box,
+  Typography,
+  Button,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Collapse,
+  Divider,
+  alpha,
+} from "@mui/material";
 import {
   Home,
   Package,
@@ -13,9 +26,11 @@ import {
   Building,
   UserCircle,
   Settings,
-  ChevronRight,
+  ChevronDown,
   HelpCircle,
   Quote,
+  ShieldCheck,
+  Briefcase,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -31,71 +46,42 @@ interface MenuItem {
   submenu?: MenuItem[];
 }
 
-// Componente para iconos con estilo consistente
-const IconWrapper = ({ children }: { children: React.ReactNode }) => (
-  <div className="w-5 h-5 flex items-center justify-center">{children}</div>
-);
-
 const menuItems: MenuItem[] = [
   {
     id: "inicio",
     path: "/dashboard",
     label: "Inicio",
-    icon: (
-      <IconWrapper>
-        <Home size={18} />
-      </IconWrapper>
-    ),
+    icon: <Home size={20} strokeWidth={1.5} />,
   },
   {
     id: "productos",
     path: "/dashboard/products",
     label: "Productos",
-    icon: (
-      <IconWrapper>
-        <Package size={18} />
-      </IconWrapper>
-    ),
+    icon: <Package size={20} strokeWidth={1.5} />,
   },
   {
     id: "clientes",
     path: "/dashboard/customers",
     label: "Clientes",
-    icon: (
-      <IconWrapper>
-        <Users size={18} />
-      </IconWrapper>
-    ),
+    icon: <Users size={20} strokeWidth={1.5} />,
   },
   {
     id: "ventas",
     path: "/dashboard/sales",
     label: "Ventas",
-    icon: (
-      <IconWrapper>
-        <DollarSign size={18} />
-      </IconWrapper>
-    ),
+    icon: <DollarSign size={20} strokeWidth={1.5} />,
     submenu: [
       {
         id: "cotizacion",
         path: "/dashboard/sales/quotation",
         label: "Cotización",
-        icon: (
-          <IconWrapper>
-            <Quote size={16} />
-          </IconWrapper>
-        ),
+        icon: <Quote size={18} strokeWidth={1.5} />,
       },
       {
         id: "ventas-list",
         path: "/dashboard/sales",
-        label: "Lista Ventas",
-        icon: (
-          <IconWrapper>
-            <DollarSign size={16} />
-          </IconWrapper>
-        ),
+        label: "Histórico de Ventas",
+        icon: <Briefcase size={18} strokeWidth={1.5} />,
       },
     ],
   },
@@ -103,201 +89,151 @@ const menuItems: MenuItem[] = [
     id: "compras",
     path: "/dashboard/purchases",
     label: "Compras",
-    icon: (
-      <IconWrapper>
-        <ShoppingCart size={18} />
-      </IconWrapper>
-    ),
+    icon: <ShoppingCart size={20} strokeWidth={1.5} />,
   },
   {
     id: "proveedores",
     path: "/dashboard/suppliers",
     label: "Proveedores",
-    icon: (
-      <IconWrapper>
-        <Building size={18} />
-      </IconWrapper>
-    ),
+    icon: <Building size={20} strokeWidth={1.5} />,
   },
   {
     id: "facturas",
     path: "/dashboard/invoices",
-    label: "Facturas",
-    icon: (
-      <IconWrapper>
-        <Building size={18} />
-      </IconWrapper>
-    ),
+    label: "Facturación SAT",
+    icon: <Building size={20} strokeWidth={1.5} />,
   },
+];
+
+const secondaryItems: MenuItem[] = [
   {
     id: "perfil",
     path: "/dashboard/profile",
     label: "Perfil Fiscal",
-    icon: (
-      <IconWrapper>
-        <UserCircle size={18} />
-      </IconWrapper>
-    ),
+    icon: <UserCircle size={20} strokeWidth={1.5} />,
   },
   {
     id: "ajustes",
     path: "/dashboard/settings",
-    label: "Ajustes",
-    icon: (
-      <IconWrapper>
-        <Settings size={18} />
-      </IconWrapper>
-    ),
+    label: "Configuración",
+    icon: <Settings size={20} strokeWidth={1.5} />,
   },
 ];
 
 export default function Sidebar({ setSelectedPage }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const [openSubmenus, setOpenSubmenus] = useState<{ [key: string]: boolean }>(
-    {}
-  );
+  const [openSubmenus, setOpenSubmenus] = useState<{ [key: string]: boolean }>({});
 
-  const handleNavigation = (path: string, pageId: string) => {
-    setSelectedPage(pageId);
+  const toggleSubmenu = (menuId: string) => {
+    setOpenSubmenus((prev) => ({ ...prev, [menuId]: !prev[menuId] }));
+  };
+
+  const handleNav = (path: string, id: string) => {
+    setSelectedPage(id);
     router.push(path);
   };
 
-  const toggleSubmenu = (menuId: string) => {
-    setOpenSubmenus((prev) => ({
-      ...prev,
-      [menuId]: !prev[menuId],
-    }));
-  };
+  const renderItem = (item: MenuItem, isSub = false) => {
+    const hasSub = !!item.submenu;
+    const isOpen = openSubmenus[item.id] || false;
+    const isActive = pathname === item.path || (hasSub && item.submenu?.some(s => pathname === s.path));
 
-  const isSubmenuOpen = (menuId: string) => openSubmenus[menuId] || false;
-
-  const renderMenuItem = (item: MenuItem) => {
-    const hasSubmenu = item.submenu && item.submenu.length > 0;
-    const isActive =
-      pathname === item.path ||
-      (item.submenu &&
-        item.submenu.some((subItem) => pathname === subItem.path));
-
-    if (hasSubmenu) {
-      return (
-        <div key={item.id} className="flex flex-col">
-          <div
-            onClick={() => toggleSubmenu(item.id)}
-            className={`cursor-pointer p-3 rounded-lg flex items-center justify-between transition-all duration-200 group ${
-              isActive
-                ? "bg-gradient-to-r from-blue-800 to-blue-900 text-white font-semibold shadow-sm"
-                : "text-gray-700 hover:bg-blue-100 hover:text-gray-900"
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className={`transition-colors duration-200 ${
-                  isActive
-                    ? "text-white"
-                    : "text-gray-500 group-hover:text-gray-700"
-                }`}
-              >
-                {item.icon}
-              </div>
-              <span className="font-medium">{item.label}</span>
-            </div>
-            <ChevronRight
-              className={`w-4 h-4 transition-transform duration-200 ${
-                isSubmenuOpen(item.id) ? "rotate-90" : "rotate-0"
-              } ${isActive ? "text-white" : "text-gray-400"}`}
-            />
-          </div>
-
-          {isSubmenuOpen(item.id) && (
-            <div className="ml-10 mt-1 flex flex-col gap-1 border-l border-blue-200 pl-4">
-              {item.submenu!.map((subItem) => (
-                <Link
-                  key={subItem.id}
-                  href={subItem.path}
-                  onClick={() => handleNavigation(subItem.path, subItem.id)}
-                  className={`cursor-pointer p-2.5 rounded-lg flex items-center gap-3 transition-all duration-200 ${
-                    pathname === subItem.path
-                      ? "bg-blue-100 text-gray-900 font-medium border-l-2 border-blue-900 -ml-0.5"
-                      : "text-gray-600 hover:bg-blue-50 hover:text-gray-900"
-                  }`}
-                >
-                  <div
-                    className={`${pathname === subItem.path ? "text-gray-900" : "text-gray-500"}`}
-                  >
-                    {subItem.icon}
-                  </div>
-                  <span className="text-sm">{subItem.label}</span>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    // Para items sin submenú
     return (
-      <Link
-        key={item.id}
-        href={item.path}
-        onClick={() => handleNavigation(item.path, item.id)}
-        className={`cursor-pointer p-3 rounded-lg flex items-center gap-3 transition-all duration-200 group ${
-          pathname === item.path
-            ? "bg-gradient-to-r from-blue-800 to-blue-900 text-white font-semibold shadow-sm"
-            : "text-gray-700 hover:bg-blue-100 hover:text-gray-900"
-        }`}
-      >
-        <div
-          className={`transition-colors duration-200 ${
-            pathname === item.path
-              ? "text-white"
-              : "text-gray-500 group-hover:text-gray-700"
-          }`}
-        >
-          {item.icon}
-        </div>
-        <span className="font-medium">{item.label}</span>
-      </Link>
+      <React.Fragment key={item.id}>
+        <ListItem disablePadding sx={{ mb: 0.5 }}>
+          <ListItemButton
+            onClick={() => hasSub ? toggleSubmenu(item.id) : handleNav(item.path, item.id)}
+            sx={{
+              borderRadius: 2,
+              mx: 1,
+              py: 1.2,
+              bgcolor: isActive && !hasSub ? alpha("#334155", 0.08) : "transparent",
+              color: isActive ? "#1e293b" : "#64748b",
+              "&:hover": { bgcolor: alpha("#334155", 0.04) },
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 40, color: isActive ? "#334155" : "#94a3b8" }}>
+              {item.icon}
+            </ListItemIcon>
+            <ListItemText 
+              primary={
+                <Typography sx={{ 
+                  fontSize: isSub ? "0.85rem" : "0.9rem", 
+                  fontWeight: isActive ? 700 : 500,
+                  letterSpacing: "-0.01em"
+                }}>
+                  {item.label}
+                </Typography>
+              } 
+            />
+            {hasSub && (
+              <ChevronDown 
+                size={16} 
+                style={{ 
+                  transform: isOpen ? "rotate(180deg)" : "none", 
+                  transition: "0.2s",
+                  color: "#94a3b8" 
+                }} 
+              />
+            )}
+          </ListItemButton>
+        </ListItem>
+        
+        {hasSub && (
+          <Collapse in={isOpen} timeout="auto" unmountOnExit>
+            <List component="div" disablePadding sx={{ pl: 3, mb: 1 }}>
+              {item.submenu?.map(sub => renderItem(sub, true))}
+            </List>
+          </Collapse>
+        )}
+      </React.Fragment>
     );
   };
 
   return (
-    <aside className="w-64 bg-white border-r border-blue-200 p-6 flex flex-col gap-2 shadow-sm">
-      {/* Logo y título */}
-      <div className="p-4 mb-6">
-        <Link href="/dashboard" className="flex items-center gap-3 group">
-          <div className="w-12 h-12 bg-gradient-to-r from-blue-800 to-blue-900 rounded-lg flex items-center justify-center shadow-sm group-hover:shadow transition-all duration-200">
-            <span className="text-white font-bold text-lg">ERP</span>
-          </div>
-          <div>
-            <h2 className="font-bold text-gray-900">Business ERP</h2>
-            <p className="text-xs text-gray-500">Administración</p>
-          </div>
-        </Link>
-      </div>
+    <Box sx={{ width: 280, bgcolor: "white", borderRight: "1px solid #e2e8f0", display: "flex", flexDirection: "column" }}>
+      {/* Brand Header */}
+      <Box sx={{ p: 4, display: "flex", alignItems: "center", gap: 1.5 }}>
+        <Box sx={{ width: 36, height: 36, bgcolor: "#334155", borderRadius: 1.5, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <ShieldCheck color="white" size={22} strokeWidth={1.5} />
+        </Box>
+        <Box>
+          <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "#1e293b", lineHeight: 1.2 }}>MVP ERP</Typography>
+          <Typography variant="caption" sx={{ color: "#94a3b8", fontWeight: 600 }}>ADMINISTRACIÓN</Typography>
+        </Box>
+      </Box>
 
-      {/* Separador */}
-      <div className="h-px bg-blue-200 mb-4"></div>
+      <Divider sx={{ mx: 2, mb: 2, opacity: 0.6 }} />
 
-      {/* Menú */}
-      <div className="space-y-1 flex-1">
-        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">
-          Navegación
-        </h3>
-        {menuItems.map(renderMenuItem)}
-      </div>
+      {/* Main Navigation */}
+      <Box sx={{ flex: 1, overflowY: "auto", px: 1 }}>
+        <Typography variant="caption" sx={{ px: 3, mb: 1, display: "block", color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          Navegación Principal
+        </Typography>
+        <List>{menuItems.map(item => renderItem(item))}</List>
 
-      {/* Footer de sidebar */}
-      <div className="mt-8 pt-6 border-t border-blue-200">
-        <div className="px-3 py-3 bg-blue-50 rounded-lg border border-blue-100">
-          <p className="text-sm text-gray-600 mb-2">¿Necesitas ayuda?</p>
-          <button className="text-sm text-gray-700 hover:text-gray-900 font-medium transition-colors duration-200 flex items-center gap-2">
-            <HelpCircle className="w-4 h-4" />
-            Soporte Técnico
-          </button>
-        </div>
-      </div>
-    </aside>
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="caption" sx={{ px: 3, mb: 1, display: "block", color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            Sistema
+          </Typography>
+          <List>{secondaryItems.map(item => renderItem(item))}</List>
+        </Box>
+      </Box>
+
+      {/* Sidebar Footer */}
+      <Box sx={{ p: 2 }}>
+        <Box sx={{ p: 2, bgcolor: "#f8fafc", borderRadius: 3, border: "1px solid #f1f5f9" }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+            <HelpCircle size={16} color="#64748b" />
+            <Typography variant="body2" sx={{ fontWeight: 600, color: "#475569" }}>Soporte Técnico</Typography>
+          </Box>
+          <Typography variant="caption" sx={{ color: "#94a3b8", display: "block", mb: 2 }}>¿Necesitas ayuda con el sistema?</Typography>
+          <Button fullWidth variant="outlined" size="small" sx={{ textTransform: "none", borderRadius: 1.5, borderColor: "#e2e8f0", color: "#475569" }}>
+            Contactar
+          </Button>
+        </Box>
+      </Box>
+    </Box>
   );
 }
