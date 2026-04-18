@@ -66,19 +66,25 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   }
 
+  let companyId: string;
   try {
     const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    companyId = payload.companyId;
 
-    if (!payload.companyId) {
+    if (!companyId) {
       return NextResponse.json(
         { error: "Usuario sin empresa asociada" },
         { status: 403 }
       );
     }
+  } catch {
+    return NextResponse.json({ error: "Token inválido o expirado" }, { status: 401 });
+  }
 
+  try {
     const products = await prisma.product.findMany({
       where: {
-        companyId: payload.companyId,
+        companyId: companyId,
       },
       orderBy: {
         createdAt: "desc",
@@ -90,8 +96,9 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json({ products });
-  } catch {
-    return NextResponse.json({ error: "Token inválido" }, { status: 401 });
+  } catch (err) {
+    console.error("Error fetching products:", err);
+    return NextResponse.json({ error: "Error al cargar productos desde la base de datos" }, { status: 500 });
   }
 }
 

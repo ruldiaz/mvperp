@@ -1,10 +1,48 @@
 // src/app/dashboard/suppliers/page.tsx
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Supplier } from "@/types/supplier";
+import { toast } from "react-hot-toast";
+import {
+  Box,
+  Typography,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Button,
+  IconButton,
+  OutlinedInput,
+  InputAdornment,
+  Stack,
+  CircularProgress,
+  Pagination,
+  Grid,
+  Tooltip,
+  Avatar,
+  Chip
+} from "@mui/material";
+import {
+  Search,
+  Plus,
+  Eye,
+  Trash2,
+  Building2,
+  Phone,
+  Mail,
+  MoreHorizontal,
+  ShoppingBag,
+  ExternalLink,
+  Calendar,
+  Filter,
+  Users
+} from "lucide-react";
 
 interface PaginationInfo {
   page: number;
@@ -16,337 +54,278 @@ interface PaginationInfo {
 export default function Suppliers() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo>({
-    page: 1,
-    limit: 10,
-    totalCount: 0,
-    totalPages: 0,
+    page: 1, limit: 10, totalCount: 0, totalPages: 0,
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const router = useRouter();
 
-  const fetchSuppliers = useCallback(
-    async (page = 1, search = "") => {
-      try {
-        setLoading(true);
-        const params = new URLSearchParams({
-          page: page.toString(),
-          limit: pagination.limit.toString(),
-          ...(search && { search }),
-        });
+  const fetchSuppliers = useCallback(async (page = 1, search = "") => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: pagination.limit.toString(),
+        ...(search && { search }),
+      });
 
-        const res = await fetch(`/api/suppliers?${params}`, {
-          credentials: "include",
-        });
+      const res = await fetch(`/api/suppliers?${params}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Error al cargar los proveedores");
 
-        if (!res.ok) throw new Error("Error al cargar los proveedores");
-
-        const data = await res.json();
-        setSuppliers(data.suppliers);
-        setPagination(data.pagination);
-      } catch (err) {
-        console.error(err);
-        setError("No se pudieron cargar los proveedores");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [pagination.limit]
-  );
+      const data = await res.json();
+      setSuppliers(data.suppliers);
+      setPagination(data.pagination);
+      setError("");
+    } catch (err) {
+      console.error(err);
+      setError("No se pudieron cargar los proveedores");
+      toast.error("Error al cargar proveedores");
+    } finally {
+      setLoading(false);
+    }
+  }, [pagination.limit]);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       fetchSuppliers(1, searchTerm);
-    }, 300);
-
+    }, 500);
     return () => clearTimeout(timeoutId);
   }, [searchTerm, fetchSuppliers]);
 
-  const handlePageChange = (newPage: number) => {
-    fetchSuppliers(newPage, searchTerm);
+  const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
+    fetchSuppliers(value, searchTerm);
   };
 
   const handleCreatePurchase = (supplierId: string) => {
     router.push(`/dashboard/purchases/create?supplierId=${supplierId}`);
   };
 
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("es-MX", {
+      style: "currency",
+      currency: "MXN",
+    }).format(amount);
+  };
+
+  const formatDate = (dateString: string | Date) => {
+    return new Date(dateString).toLocaleDateString("es-MX", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric"
+    });
+  };
+
   if (loading && suppliers.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 flex justify-center items-center">
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-8 rounded-2xl border border-gray-200 shadow-sm text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-xl font-semibold text-gray-700">
-            Cargando proveedores...
-          </p>
-        </div>
-      </div>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <Stack sx={{ alignItems: 'center' }} spacing={2}>
+          <CircularProgress size={32} sx={{ color: '#334155' }} />
+          <Typography sx={{ color: '#64748b' }}>Cargando proveedores...</Typography>
+        </Stack>
+      </Box>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
-      {/* Hero Section */}
-      <div className="pt-8 pb-8 px-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-b-2xl shadow-lg">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div>
-              <h1 className="text-4xl font-bold mb-2 leading-tight">
-                Proveedores
-              </h1>
-              <p className="text-xl text-blue-100 max-w-2xl">
-                Gestiona todos tus proveedores en un solo lugar
-              </p>
-            </div>
-            <Link
-              href="/dashboard/suppliers/create"
-              className="mt-4 md:mt-0 bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-            >
-              + Nuevo Proveedor
-            </Link>
-          </div>
-        </div>
-      </div>
+    <Box sx={{ py: 4, px: { xs: 2, md: 4 }, animation: 'fadeIn 0.5s ease' }}>
+      <style jsx global>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
 
-      {/* Contenido Principal */}
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Barra de búsqueda y estadísticas */}
-        <div className="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 p-6 rounded-2xl bg-gradient-to-r from-gray-50 to-blue-50 border border-gray-200 shadow-sm">
-            <div className="flex items-center space-x-4">
-              <div className="text-2xl bg-white p-3 rounded-xl shadow-sm">
-                🔍
-              </div>
-              <div className="flex-1">
-                <input
-                  type="text"
-                  placeholder="Buscar por nombre, contacto o RFC..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full p-4 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200"
-                />
-              </div>
-            </div>
-          </div>
+      {/* Header Section */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4, flexWrap: 'wrap', gap: 2 }}>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 700, color: '#1e293b', letterSpacing: '-0.02em' }}>
+            Proveedores
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#64748b', mt: 0.5 }}>
+            Gestión centralizada de suministros y abastecimiento
+          </Typography>
+        </Box>
+        <Button
+          variant="contained"
+          component={Link}
+          href="/dashboard/suppliers/create"
+          startIcon={<Plus size={18} />}
+          sx={{
+            bgcolor: '#334155',
+            '&:hover': { bgcolor: '#1e293b' },
+            textTransform: 'none',
+            borderRadius: 2,
+            px: 3,
+            py: 1,
+            boxShadow: 'none',
+            fontWeight: 600
+          }}
+        >
+          Nuevo Proveedor
+        </Button>
+      </Box>
 
-          <div className="p-6 rounded-2xl bg-gradient-to-r from-green-50 to-emerald-50 border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 mb-1">Total Proveedores</p>
-                <p className="text-3xl font-bold text-gray-800">
-                  {pagination.totalCount}
-                </p>
-              </div>
-              <div className="text-3xl">🏢</div>
-            </div>
-          </div>
-        </div>
+      {/* Filters Bar */}
+      <Paper variant="outlined" sx={{ p: 2, mb: 4, borderRadius: 3, borderColor: '#e2e8f0', bgcolor: '#f8fafc' }}>
+        <Grid container spacing={2} sx={{ alignItems: 'center' }}>
+          <Grid size={{ xs: 12, md: 8 }}>
+            <OutlinedInput
+              fullWidth
+              size="small"
+              placeholder="Buscar por nombre, RFC o contacto..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              sx={{ bgcolor: 'white', borderRadius: 2 }}
+              startAdornment={
+                <InputAdornment position="start">
+                  <Search size={16} color="#94a3b8" />
+                </InputAdornment>
+              }
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <Stack direction="row" spacing={1} sx={{ justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
+              <Tooltip title="Filtrar">
+                <IconButton sx={{ border: '1px solid #e2e8f0', borderRadius: 2, bgcolor: 'white' }}>
+                  <Filter size={18} color="#64748b" />
+                </IconButton>
+              </Tooltip>
+              <Chip 
+                label={`${pagination.totalCount} Proveedores`} 
+                variant="outlined" 
+                sx={{ borderRadius: 2, fontWeight: 600, color: '#475569', bgcolor: 'white' }} 
+              />
+            </Stack>
+          </Grid>
+        </Grid>
+      </Paper>
 
-        {error && (
-          <div className="mb-8 p-6 rounded-2xl bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 shadow-sm">
-            <div className="flex items-center space-x-4">
-              <div className="text-2xl bg-white p-3 rounded-xl shadow-sm">
-                ⚠️
-              </div>
-              <div className="flex-1">
-                <p className="text-red-600">{error}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Tabla de proveedores */}
-        <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300 bg-white">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gradient-to-r from-gray-900 to-gray-800 text-white">
-                  <th className="px-6 py-4 text-left font-semibold">
-                    Proveedor
-                  </th>
-                  <th className="px-6 py-4 text-left font-semibold">
-                    Contacto
-                  </th>
-                  <th className="px-6 py-4 text-left font-semibold">
-                    Teléfono
-                  </th>
-                  <th className="px-6 py-4 text-left font-semibold">
-                    Compras Totales
-                  </th>
-                  <th className="px-6 py-4 text-left font-semibold">
-                    Última Compra
-                  </th>
-                  <th className="px-6 py-4 text-left font-semibold">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {suppliers.map((supplier) => (
-                  <tr
-                    key={supplier.id}
-                    className="border-b border-gray-200 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 group"
-                  >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <div className="bg-white p-2 rounded-lg shadow-sm mr-3 group-hover:shadow-md transition-shadow">
-                          🏢
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-800">
-                            {supplier.name}
-                          </div>
-                          {supplier.rfc && (
-                            <div className="text-sm text-gray-500">
-                              {supplier.rfc}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-gray-700">
-                        {supplier.contactName || "-"}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-gray-700">
-                        {supplier.phone || "-"}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-gray-800">
-                        $
-                        {supplier.totalPurchases.toLocaleString("es-MX", {
-                          minimumFractionDigits: 2,
-                        })}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-gray-700">
-                        {supplier.lastPurchase
-                          ? new Date(supplier.lastPurchase).toLocaleDateString(
-                              "es-MX"
-                            )
-                          : "-"}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleCreatePurchase(supplier.id)}
-                          className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-lg font-medium hover:from-green-600 hover:to-emerald-600 transition-all duration-200 shadow-sm hover:shadow flex items-center"
-                          title="Realizar compra"
-                        >
-                          <span className="mr-2">🛒</span>
-                          Comprar
-                        </button>
-                        <Link
-                          href={`/dashboard/suppliers/${supplier.id}`}
-                          className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 shadow-sm hover:shadow flex items-center"
-                        >
-                          <span className="mr-2">👁️</span>
-                          Ver
-                        </Link>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {suppliers.length === 0 && !loading && (
-            <div className="p-12 text-center">
-              <div className="bg-gradient-to-r from-gray-50 to-blue-50 p-8 rounded-2xl inline-block border border-gray-200">
-                <div className="text-6xl mb-4">🏢</div>
-                <h3 className="text-2xl font-bold text-gray-800 mb-2">
-                  {searchTerm
-                    ? "No se encontraron proveedores"
-                    : "No hay proveedores registrados"}
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  {searchTerm
-                    ? "Intenta con otros términos de búsqueda"
-                    : "Comienza registrando tu primer proveedor"}
-                </p>
-                <Link
-                  href="/dashboard/suppliers/create"
-                  className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-8 py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 shadow-lg hover:shadow-xl"
+      {/* List / Table */}
+      <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 3, borderColor: '#e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)' }}>
+        <Table sx={{ minWidth: 800 }}>
+          <TableHead sx={{ bgcolor: '#f8fafc' }}>
+            <TableRow>
+              <TableCell sx={{ color: '#64748b', fontWeight: 700, fontSize: '0.75rem', py: 2 }}>PROVEEDOR</TableCell>
+              <TableCell sx={{ color: '#64748b', fontWeight: 700, fontSize: '0.75rem', py: 2 }}>CONTACTO</TableCell>
+              <TableCell sx={{ color: '#64748b', fontWeight: 700, fontSize: '0.75rem', py: 2 }}>TELÉFONO</TableCell>
+              <TableCell sx={{ color: '#64748b', fontWeight: 700, fontSize: '0.75rem', py: 2 }}>TOTAL COMPRADO</TableCell>
+              <TableCell sx={{ color: '#64748b', fontWeight: 700, fontSize: '0.75rem', py: 2 }}>ÚLTIMA COMPRA</TableCell>
+              <TableCell align="right" sx={{ color: '#64748b', fontWeight: 700, fontSize: '0.75rem', py: 2 }}>ACCIONES</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                  <CircularProgress size={30} />
+                </TableCell>
+              </TableRow>
+            ) : suppliers.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} align="center" sx={{ py: 10 }}>
+                  <Stack sx={{ alignItems: 'center', opacity: 0.5 }} spacing={2}>
+                    <Building2 size={48} strokeWidth={1} />
+                    <Typography variant="body1">No se encontraron proveedores</Typography>
+                  </Stack>
+                </TableCell>
+              </TableRow>
+            ) : (
+              suppliers.map((supplier) => (
+                <TableRow 
+                  key={supplier.id} 
+                  hover 
+                  sx={{ '&:hover': { bgcolor: '#fbfcfd' }, cursor: 'pointer' }}
+                  onClick={() => router.push(`/dashboard/suppliers/${supplier.id}`)}
                 >
-                  + Agregar Primer Proveedor
-                </Link>
-              </div>
-            </div>
-          )}
-        </div>
+                  <TableCell>
+                    <Stack sx={{ alignItems: 'center' }} direction="row" spacing={2}>
+                      <Avatar sx={{ bgcolor: '#f1f5f9', color: '#475569', borderRadius: 2, width: 40, height: 40 }}>
+                        <Building2 size={20} />
+                      </Avatar>
+                      <Box>
+                        <Typography sx={{ fontWeight: 600, color: '#1e293b', lineHeight: 1.2 }}>
+                          {supplier.name}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                          {supplier.rfc || 'Sin RFC'}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </TableCell>
+                  <TableCell>
+                    <Stack sx={{ alignItems: 'center' }} direction="row" spacing={1}>
+                      <Typography variant="body2" sx={{ color: '#445569' }}>
+                        {supplier.contactName || '-'}
+                      </Typography>
+                    </Stack>
+                  </TableCell>
+                  <TableCell>
+                    {supplier.phone ? (
+                       <Stack sx={{ alignItems: 'center', color: '#64748b' }} direction="row" spacing={1}>
+                        <Phone size={14} />
+                        <Typography variant="body2">{supplier.phone}</Typography>
+                      </Stack>
+                    ) : '-'}
+                  </TableCell>
+                  <TableCell>
+                    <Typography sx={{ fontWeight: 700, color: '#334155' }}>
+                      {formatCurrency(supplier.totalPurchases)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    {supplier.lastPurchase ? (
+                      <Stack sx={{ alignItems: 'center', color: '#64748b' }} direction="row" spacing={1}>
+                        <Calendar size={14} />
+                        <Typography variant="body2">{formatDate(supplier.lastPurchase)}</Typography>
+                      </Stack>
+                    ) : '-'}
+                  </TableCell>
+                  <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                    <Stack sx={{ justifyContent: 'flex-end' }} direction="row" spacing={1}>
+                      <Tooltip title="Realizar Compra">
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleCreatePurchase(supplier.id)}
+                          sx={{ color: '#10b981', bgcolor: '#f0fdf4', '&:hover': { bgcolor: '#dcfce7' } }}
+                        >
+                          <ShoppingBag size={18} />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Ver Detalles">
+                        <IconButton 
+                          size="small" 
+                          component={Link} 
+                          href={`/dashboard/suppliers/${supplier.id}`}
+                          sx={{ color: '#6366f1', bgcolor: '#eef2ff', '&:hover': { bgcolor: '#e0e7ff' } }}
+                        >
+                          <Eye size={18} />
+                        </IconButton>
+                      </Tooltip>
+                    </Stack>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
-        {/* Paginación */}
-        {pagination.totalPages > 1 && (
-          <div className="mt-8 flex justify-center items-center gap-3">
-            <button
-              onClick={() => handlePageChange(pagination.page - 1)}
-              disabled={pagination.page === 1}
-              className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-            >
-              ← Anterior
-            </button>
-
-            <div className="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 text-blue-700 font-medium">
-              Página {pagination.page} de {pagination.totalPages}
-            </div>
-
-            <button
-              onClick={() => handlePageChange(pagination.page + 1)}
-              disabled={pagination.page === pagination.totalPages}
-              className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-            >
-              Siguiente →
-            </button>
-          </div>
-        )}
-
-        {/* Enlaces rápidos */}
-        <div className="mt-12 bg-gradient-to-r from-gray-900 to-gray-800 text-white py-8 px-6 rounded-2xl">
-          <h3 className="text-xl font-bold mb-6 text-center">
-            Acciones Rápidas
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Link
-              href="/dashboard/purchases"
-              className="bg-white/5 hover:bg-white/10 p-4 rounded-xl transition-all duration-200 group text-center"
-            >
-              <div className="text-2xl mb-2">📦</div>
-              <div className="font-medium mb-1 group-hover:text-blue-300">
-                Compras
-              </div>
-              <div className="text-sm text-gray-300">Ver todas las compras</div>
-            </Link>
-            <Link
-              href="/dashboard/inventory"
-              className="bg-white/5 hover:bg-white/10 p-4 rounded-xl transition-all duration-200 group text-center"
-            >
-              <div className="text-2xl mb-2">📊</div>
-              <div className="font-medium mb-1 group-hover:text-blue-300">
-                Inventario
-              </div>
-              <div className="text-sm text-gray-300">Control de stock</div>
-            </Link>
-            <Link
-              href="/dashboard/reports/suppliers"
-              className="bg-white/5 hover:bg-white/10 p-4 rounded-xl transition-all duration-200 group text-center"
-            >
-              <div className="text-2xl mb-2">📈</div>
-              <div className="font-medium mb-1 group-hover:text-blue-300">
-                Reportes
-              </div>
-              <div className="text-sm text-gray-300">
-                Análisis de proveedores
-              </div>
-            </Link>
-          </div>
-        </div>
-      </div>
-    </div>
+      {/* Pagination */}
+      {!loading && pagination.totalPages > 1 && (
+        <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
+          <Pagination 
+            count={pagination.totalPages} 
+            page={pagination.page} 
+            onChange={handlePageChange} 
+            shape="rounded"
+            sx={{
+              '& .MuiPaginationItem-root': { fontWeight: 600, color: '#475569' },
+              '& .Mui-selected': { bgcolor: '#f1f5f9 !important', color: '#1e293b' }
+            }}
+          />
+        </Box>
+      )}
+    </Box>
   );
 }

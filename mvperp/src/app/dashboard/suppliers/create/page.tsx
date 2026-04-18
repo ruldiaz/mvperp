@@ -1,11 +1,37 @@
 // src/app/dashboard/suppliers/create/page.tsx
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { Supplier } from "@/types/supplier";
+import { toast } from "react-hot-toast";
+import {
+  Box,
+  Typography,
+  Button,
+  TextField,
+  Paper,
+  CircularProgress,
+  Stack,
+  InputAdornment,
+  IconButton,
+  Divider,
+  Grid
+} from "@mui/material";
+import {
+  ArrowLeft,
+  Info,
+  Building2,
+  User,
+  Phone,
+  Mail,
+  MapPin,
+  Save,
+  Globe
+} from "lucide-react";
 
 export default function CreateSupplier() {
+  const router = useRouter();
   const [form, setForm] = useState({
     name: "",
     contactName: "",
@@ -21,19 +47,31 @@ export default function CreateSupplier() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const router = useRouter();
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError("");
-
+    if (!form.name.trim()) {
+      toast.error("El nombre del proveedor es obligatorio");
+      return;
+    }
+    
     // Validación de RFC
     if (form.rfc && !/^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$/.test(form.rfc)) {
       setError("El formato del RFC no es válido");
-      setLoading(false);
+      toast.error("Formato de RFC inválido");
       return;
     }
+
+    setLoading(true);
+    setError("");
 
     try {
       const res = await fetch("/api/suppliers", {
@@ -44,325 +82,164 @@ export default function CreateSupplier() {
       });
 
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || "Error al crear proveedor");
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Error al crear proveedor");
       }
 
-      const data = await res.json();
-      router.push(`/dashboard/suppliers/${data.supplier.id}`);
-      router.refresh();
-    } catch (err) {
+      toast.success("Proveedor creado exitosamente");
+      router.push("/dashboard/suppliers");
+    } catch (err: unknown) {
       console.error(err);
-      setError(
-        err instanceof Error ? err.message : "Error al crear el proveedor"
-      );
+      const message = err instanceof Error ? err.message : "Error desconocido";
+      toast.error(message);
+      setError(message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
-      {/* Hero Section */}
-      <div className="pt-8 pb-8 px-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-b-2xl shadow-lg">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div>
-              <h1 className="text-4xl font-bold mb-2 leading-tight">
-                Nuevo Proveedor
-              </h1>
-              <p className="text-xl text-blue-100 max-w-2xl">
-                Agrega un nuevo proveedor a tu sistema
-              </p>
-            </div>
-            <Link
-              href="/dashboard/suppliers"
-              className="mt-4 md:mt-0 bg-transparent border-2 border-white text-white px-6 py-2 rounded-lg font-semibold hover:bg-white/10 transition-all duration-200"
-            >
-              ← Volver
-            </Link>
-          </div>
-        </div>
-      </div>
+    <Box sx={{ maxWidth: 1000, mx: "auto", py: 6, px: 3, animation: "fadeIn 0.3s ease" }}>
+      <style jsx global>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
 
-      {/* Formulario */}
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <form onSubmit={handleSubmit} className="space-y-8">
-          {error && (
-            <div className="p-6 rounded-2xl bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 shadow-sm">
-              <div className="flex items-center space-x-4">
-                <div className="text-2xl bg-white p-3 rounded-xl shadow-sm">
-                  ⚠️
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-red-800 mb-1">
-                    Error
-                  </h3>
-                  <p className="text-red-600">{error}</p>
-                </div>
-              </div>
-            </div>
-          )}
+      {/* Header (Exact Products Create Style) */}
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", mb: 6, flexWrap: "wrap", gap: 3 }}>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 700, color: '#1e293b', letterSpacing: '-0.02em', mb: 1 }}>
+            Crear Proveedor
+          </Typography>
+          <Typography sx={{ color: '#64748b', fontSize: '0.95rem' }}>
+            Registra los datos fiscales y de contacto de tu nuevo proveedor
+          </Typography>
+        </Box>
+        <Button
+          variant="outlined"
+          onClick={() => router.back()}
+          startIcon={<ArrowLeft size={18} strokeWidth={1.5} />}
+          sx={{ borderRadius: 1.5, textTransform: 'none', px: 3, py: 1.2, borderColor: '#e2e8f0', color: '#475569', '&:hover': { bgcolor: '#f8fafc', borderColor: '#cbd5e1' } }}
+        >
+          Cancelar
+        </Button>
+      </Box>
 
-          {/* Información Básica */}
-          <div className="p-8 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-gray-200 shadow-sm">
-            <div className="flex items-start space-x-6 mb-6">
-              <div className="text-4xl bg-white p-4 rounded-xl shadow-sm">
-                🏢
-              </div>
-              <div className="flex-1">
-                <h2 className="text-2xl font-bold text-gray-800 mb-3">
-                  Información Básica
-                </h2>
-                <p className="text-gray-600 mb-6">
-                  Información principal del proveedor
-                </p>
-              </div>
-            </div>
+      {error && (
+        <Paper variant="outlined" sx={{ p: 2, mb: 4, bgcolor: '#fee2e2', borderColor: '#f87171', color: '#991b1b', borderRadius: 2 }}>
+          <Typography variant="body2">{error}</Typography>
+        </Paper>
+      )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nombre del Proveedor *
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={form.name}
-                  onChange={handleChange}
-                  required
-                  className="w-full p-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200"
-                  placeholder="Ingrese el nombre del proveedor"
+      <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        
+        {/* Información Principal */}
+        <Paper variant="outlined" sx={{ p: 4, borderRadius: 3, borderColor: '#e2e8f0' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
+            <Building2 size={18} color="#64748b" strokeWidth={1.5} />
+            <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e293b' }}>Identificación de Empresa</Typography>
+          </Box>
+          
+          <Grid container spacing={4}>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                fullWidth size="small" label="Nombre del Proveedor *" name="name"
+                value={form.name} onChange={handleChange} required
+                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 1.5 } }}
+                placeholder="Ej. Distribuciones del Norte S.A."
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                fullWidth size="small" label="RFC" name="rfc"
+                value={form.rfc} onChange={handleChange}
+                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 1.5 } }}
+                placeholder="XAXX010101000"
+              />
+            </Grid>
+          </Grid>
+        </Paper>
+
+        <Grid container spacing={4}>
+          <Grid size={{ xs: 12, md: 6 }}>
+            {/* Contacto */}
+            <Paper variant="outlined" sx={{ p: 4, borderRadius: 3, borderColor: '#e2e8f0', minHeight: '100%' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
+                <User size={18} color="#64748b" strokeWidth={1.5} />
+                <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e293b' }}>Datos de Contacto</Typography>
+              </Box>
+              <Stack spacing={3}>
+                <TextField
+                  fullWidth size="small" label="Nombre del representante" name="contactName"
+                  value={form.contactName} onChange={handleChange}
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 1.5 } }}
+                  placeholder="Ej. Lic. Armando Casas"
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  RFC
-                </label>
-                <input
-                  type="text"
-                  name="rfc"
-                  value={form.rfc}
-                  onChange={handleChange}
-                  className="w-full p-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200"
-                  placeholder="XAXX010101000"
-                  pattern="[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}"
-                  title="Formato de RFC válido: 3-4 letras, 6 dígitos, 3 caracteres alfanuméricos"
+                <TextField
+                  fullWidth size="small" label="Teléfono" name="phone"
+                  value={form.phone} onChange={handleChange}
+                  slotProps={{ input: { startAdornment: <InputAdornment position="start"><Phone size={14} /></InputAdornment> } }}
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 1.5 } }}
                 />
-              </div>
-            </div>
-          </div>
-
-          {/* Información de Contacto */}
-          <div className="p-8 rounded-2xl bg-gradient-to-r from-green-50 to-emerald-50 border border-gray-200 shadow-sm">
-            <div className="flex items-start space-x-6 mb-6">
-              <div className="text-4xl bg-white p-4 rounded-xl shadow-sm">
-                📞
-              </div>
-              <div className="flex-1">
-                <h2 className="text-2xl font-bold text-gray-800 mb-3">
-                  Información de Contacto
-                </h2>
-                <p className="text-gray-600 mb-6">
-                  Datos de contacto del proveedor
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nombre de Contacto
-                </label>
-                <input
-                  type="text"
-                  name="contactName"
-                  value={form.contactName}
-                  onChange={handleChange}
-                  className="w-full p-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200"
-                  placeholder="Persona de contacto"
+                <TextField
+                  fullWidth size="small" label="Correo electrónico" name="email" type="email"
+                  value={form.email} onChange={handleChange}
+                  slotProps={{ input: { startAdornment: <InputAdornment position="start"><Mail size={14} /></InputAdornment> } }}
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 1.5 } }}
+                  placeholder="proveedor@empresa.com"
                 />
-              </div>
+              </Stack>
+            </Paper>
+          </Grid>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Teléfono
-                </label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={form.phone}
-                  onChange={handleChange}
-                  className="w-full p-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200"
-                  placeholder="+52 123 456 7890"
+          <Grid size={{ xs: 12, md: 6 }}>
+            {/* Ubicación */}
+            <Paper variant="outlined" sx={{ p: 4, borderRadius: 3, borderColor: '#e2e8f0', minHeight: '100%' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
+                <MapPin size={18} color="#64748b" strokeWidth={1.5} />
+                <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e293b' }}>Domicilio</Typography>
+              </Box>
+              <Stack spacing={3}>
+                <TextField
+                  fullWidth size="small" label="Calle y Número" name="street"
+                  value={form.street} onChange={handleChange}
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 1.5 } }}
                 />
-              </div>
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField fullWidth size="small" label="Colonia" name="neighborhood" value={form.neighborhood} onChange={handleChange} sx={{ "& .MuiOutlinedInput-root": { borderRadius: 1.5 } }} />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField fullWidth size="small" label="Código Postal" name="postalCode" value={form.postalCode} onChange={handleChange} sx={{ "& .MuiOutlinedInput-root": { borderRadius: 1.5 } }} />
+                  </Grid>
+                </Grid>
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField fullWidth size="small" label="Ciudad" name="city" value={form.city} onChange={handleChange} sx={{ "& .MuiOutlinedInput-root": { borderRadius: 1.5 } }} />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField fullWidth size="small" label="Estado" name="state" value={form.state} onChange={handleChange} sx={{ "& .MuiOutlinedInput-root": { borderRadius: 1.5 } }} />
+                  </Grid>
+                </Grid>
+              </Stack>
+            </Paper>
+          </Grid>
+        </Grid>
 
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={form.email}
-                  onChange={handleChange}
-                  className="w-full p-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200"
-                  placeholder="proveedor@ejemplo.com"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Dirección */}
-          <div className="p-8 rounded-2xl bg-gradient-to-r from-purple-50 to-pink-50 border border-gray-200 shadow-sm">
-            <div className="flex items-start space-x-6 mb-6">
-              <div className="text-4xl bg-white p-4 rounded-xl shadow-sm">
-                📍
-              </div>
-              <div className="flex-1">
-                <h2 className="text-2xl font-bold text-gray-800 mb-3">
-                  Dirección
-                </h2>
-                <p className="text-gray-600 mb-6">Ubicación del proveedor</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Calle
-                </label>
-                <input
-                  type="text"
-                  name="street"
-                  value={form.street}
-                  onChange={handleChange}
-                  className="w-full p-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200"
-                  placeholder="Nombre de la calle"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Colonia
-                </label>
-                <input
-                  type="text"
-                  name="neighborhood"
-                  value={form.neighborhood}
-                  onChange={handleChange}
-                  className="w-full p-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200"
-                  placeholder="Colonia"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Código Postal
-                </label>
-                <input
-                  type="text"
-                  name="postalCode"
-                  value={form.postalCode}
-                  onChange={handleChange}
-                  className="w-full p-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200"
-                  placeholder="00000"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Ciudad
-                </label>
-                <input
-                  type="text"
-                  name="city"
-                  value={form.city}
-                  onChange={handleChange}
-                  className="w-full p-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200"
-                  placeholder="Ciudad"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Estado
-                </label>
-                <input
-                  type="text"
-                  name="state"
-                  value={form.state}
-                  onChange={handleChange}
-                  className="w-full p-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200"
-                  placeholder="Estado"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Municipio/Localidad
-                </label>
-                <input
-                  type="text"
-                  name="municipality"
-                  value={form.municipality}
-                  onChange={handleChange}
-                  className="w-full p-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200"
-                  placeholder="Municipio"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Acciones */}
-          <div className="flex justify-end gap-4">
-            <Link
-              href="/dashboard/suppliers"
-              className="bg-transparent border-2 border-gray-300 text-gray-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
-            >
-              Cancelar
-            </Link>
-            <button
-              type="submit"
-              disabled={loading}
-              className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-8 py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-            >
-              {loading ? (
-                <>
-                  <svg
-                    className="animate-spin h-5 w-5 mr-2 text-white"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
-                  Creando...
-                </>
-              ) : (
-                "Crear Proveedor"
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={loading}
+            startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <Save size={18} strokeWidth={1.5} />}
+            sx={{ px: 4, py: 1.5, borderRadius: 1.5, bgcolor: '#334155', '&:hover': { bgcolor: '#1e293b' }, textTransform: 'none', boxShadow: 'none' }}
+          >
+            {loading ? "Guardando..." : "Guardar Proveedor"}
+          </Button>
+        </Box>
+      </Box>
+    </Box>
   );
 }

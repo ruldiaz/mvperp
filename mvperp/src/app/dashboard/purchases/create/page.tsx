@@ -1,11 +1,43 @@
 // src/app/dashboard/purchases/create/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PurchaseItemRequest } from "@/types/purchase";
 import { Product } from "@/types/product";
 import { toast } from "react-hot-toast";
+import {
+  Box,
+  Typography,
+  Button,
+  Paper,
+  Grid,
+  TextField,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  IconButton,
+  MenuItem,
+  CircularProgress,
+  Stack,
+  Alert,
+  Divider,
+  InputAdornment
+} from "@mui/material";
+import {
+  ArrowLeft,
+  Plus,
+  Trash2,
+  Package,
+  ShoppingBag,
+  Info,
+  Save,
+  X,
+  UserPlus
+} from "lucide-react";
 
 interface PurchaseItem extends PurchaseItemRequest {
   totalPrice: number;
@@ -19,19 +51,24 @@ export default function CreatePurchase() {
   const [products, setProducts] = useState<Product[]>([]);
   const [items, setItems] = useState<PurchaseItem[]>([]);
   const [notes, setNotes] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState(true);
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
+        setLoadingProducts(true);
         const res = await fetch("/api/products", { credentials: "include" });
-        if (!res.ok) throw new Error("Error al cargar productos");
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          throw new Error(errorData.error || "Error al cargar productos");
+        }
         const data = await res.json();
         setProducts(data.products || []);
       } catch (error) {
         console.error("Error fetching products:", error);
-        toast.error("Error al cargar los productos");
+        const message = error instanceof Error ? error.message : "Error al cargar los productos";
+        toast.error(message);
       } finally {
         setLoadingProducts(false);
       }
@@ -42,19 +79,27 @@ export default function CreatePurchase() {
   const addItem = () => {
     setItems([
       ...items,
-      { productId: "", quantity: 0, unitPrice: 0, totalPrice: 0 },
+      { productId: "", quantity: 1, unitPrice: 0, totalPrice: 0 },
     ]);
   };
 
   const updateItem = (index: number, field: string, value: unknown) => {
     const newItems = [...items];
-    newItems[index] = { ...newItems[index], [field]: value };
-
-    if (field === "quantity" || field === "unitPrice") {
-      newItems[index].totalPrice =
-        Number(newItems[index].quantity) * Number(newItems[index].unitPrice);
+    const item = { ...newItems[index], [field]: value };
+    
+    // Auto-calculate unit price if product is selected for the first time
+    if (field === "productId" && value) {
+      const selectedProd = products.find(p => p.id === value);
+      if (selectedProd) {
+        item.unitPrice = selectedProd.cost || 0;
+      }
     }
 
+    if (field === "quantity" || field === "unitPrice" || field === "productId") {
+      item.totalPrice = Number(item.quantity) * Number(item.unitPrice);
+    }
+
+    newItems[index] = item;
     setItems(newItems);
   };
 
@@ -81,7 +126,7 @@ export default function CreatePurchase() {
       return;
     }
 
-    setLoading(true);
+    setIsSubmitting(true);
 
     try {
       const res = await fetch("/api/purchases", {
@@ -100,349 +145,265 @@ export default function CreatePurchase() {
       }
     } catch (error) {
       console.error("Error creating purchase:", error);
-      const message =
-        error instanceof Error ? error.message : "Error de conexión";
+      const message = error instanceof Error ? error.message : "Error de conexión";
       toast.error(`Error al crear la compra: ${message}`);
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  const totalAmount = items.reduce((sum, item) => sum + item.totalPrice, 0);
+  const totalAmount = useMemo(() => items.reduce((sum, item) => sum + item.totalPrice, 0), [items]);
 
-  const purchasableProducts = products.filter(
-    (product) => product.type === "producto"
-  );
+  const purchasableProducts = useMemo(() => 
+    products.filter((product) => product.type === "producto"), 
+  [products]);
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("es-MX", {
+      style: "currency",
+      currency: "MXN",
+    }).format(amount);
+  };
 
   if (loadingProducts && products.length === 0) {
     return (
-      <div className="flex justify-center items-center min-h-[500px]">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">Cargando productos...</p>
-        </div>
-      </div>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <Stack sx={{ alignItems: 'center' }} spacing={2}>
+          <CircularProgress size={32} sx={{ color: '#334155' }} />
+          <Typography sx={{ color: '#64748b' }}>Cargando catálogo...</Typography>
+        </Stack>
+      </Box>
     );
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <Box sx={{ maxWidth: 1100, mx: "auto", py: 4, px: { xs: 2, md: 3 }, animation: 'fadeIn 0.3s ease' }}>
+      <style jsx global>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 px-4 sm:px-6 lg:px-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">Realizar Compra</h1>
-          <p className="text-gray-600 mt-1">
-            Registra una nueva compra a proveedor
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="bg-gradient-to-r from-gray-500 to-gray-600 text-white px-6 py-3 rounded-xl font-semibold shadow hover:shadow-lg transition-all duration-200 flex items-center gap-2"
-        >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", mb: 4, flexWrap: "wrap", gap: 3 }}>
+        <Box>
+          <Button
+            startIcon={<ArrowLeft size={16} />}
+            onClick={() => router.back()}
+            sx={{ color: '#64748b', mb: 1.5, p: 0, '&:hover': { bgcolor: 'transparent', color: '#1e293b' }, textTransform: 'none' }}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-          Cancelar
-        </button>
-      </div>
+            Volver a compras
+          </Button>
+          <Typography variant="h4" sx={{ fontWeight: 700, color: '#1e293b', letterSpacing: '-0.02em' }}>
+            Registrar Compra
+          </Typography>
+        </Box>
+        <Stack direction="row" spacing={1.5}>
+          <Button
+            variant="outlined"
+            onClick={() => router.back()}
+            sx={{ borderRadius: 2, px: 3, py: 1, textTransform: 'none', borderColor: '#cbd5e1', color: '#475569' }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            disabled={isSubmitting || !supplierId || items.length === 0}
+            onClick={handleSubmit}
+            startIcon={isSubmitting ? <CircularProgress size={14} color="inherit" /> : <Save size={18} strokeWidth={1.5} />}
+            sx={{ borderRadius: 2, px: 4, py: 1, bgcolor: '#334155', '&:hover': { bgcolor: '#1e293b' }, textTransform: 'none', boxShadow: 'none' }}
+          >
+            {isSubmitting ? "Registrando..." : "Guardar Compra"}
+          </Button>
+        </Stack>
+      </Box>
 
-      {/* Advertencia si no hay proveedor */}
+      {/* Supplier Missing Warning */}
       {!supplierId && (
-        <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200 text-yellow-700 px-6 py-4 rounded-2xl mx-4 sm:mx-6 lg:mx-8">
-          <div className="flex items-center gap-3">
-            <svg
-              className="w-5 h-5 text-yellow-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.998-.833-2.732 0L4.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-              />
-            </svg>
-            <p>⚠️ Debes seleccionar un proveedor antes de crear una compra.</p>
-          </div>
-          <button
-            onClick={() => router.push("/dashboard/suppliers")}
-            className="mt-3 bg-gradient-to-r from-yellow-600 to-amber-600 text-white px-5 py-2.5 rounded-lg font-medium shadow hover:shadow-md transition-all"
-          >
-            Seleccionar Proveedor
-          </button>
-        </div>
+        <Alert 
+          severity="warning" 
+          variant="outlined" 
+          icon={<Info size={20} />}
+          action={
+            <Button color="inherit" size="small" onClick={() => router.push("/dashboard/suppliers")} sx={{ fontWeight: 700, textTransform: 'none' }}>
+              IR A PROVEEDORES
+            </Button>
+          }
+          sx={{ mb: 4, borderRadius: 2, bgcolor: '#fffbed', borderColor: '#fef08a', color: '#854d0e', '& .MuiAlert-icon': { color: '#854d0e' } }}
+        >
+          Debes seleccionar un proveedor antes de registrar la entrada de mercancía.
+        </Alert>
       )}
 
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8 mx-4 sm:mx-6 lg:mx-8">
-        <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Notas */}
-          <div>
-            <label className="block text-lg font-semibold text-gray-800 mb-4 flex items-center gap-3">
-              <svg
-                className="w-6 h-6 text-purple-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+      {/* Main Form Area */}
+      <form onSubmit={handleSubmit}>
+        <Grid container spacing={3}>
+          {/* Left: Items Table */}
+          <Grid size={{ xs: 12, lg: 8 }}>
+            <Paper variant="outlined" sx={{ borderRadius: 3, borderColor: '#e2e8f0', overflow: 'hidden' }}>
+              <Box sx={{ p: 2.5, borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: '#f8fafc' }}>
+                <Typography sx={{ fontWeight: 700, color: '#475569', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Package size={18} /> Detalle de Productos
+                </Typography>
+                <Button
+                  size="small"
+                  startIcon={<Plus size={16} />}
+                  onClick={addItem}
+                  disabled={!supplierId}
+                  sx={{ textTransform: 'none', borderRadius: 1.5, fontWeight: 600 }}
+                >
+                  Agregar producto
+                </Button>
+              </Box>
+
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ bgcolor: '#fff' }}>
+                      <TableCell sx={{ color: '#94a3b8', fontWeight: 600, fontSize: '0.75rem', py: 1.5 }}>PRODUCTO</TableCell>
+                      <TableCell sx={{ color: '#94a3b8', fontWeight: 600, fontSize: '0.75rem', py: 1.5 }} width="100">CANT.</TableCell>
+                      <TableCell sx={{ color: '#94a3b8', fontWeight: 600, fontSize: '0.75rem', py: 1.5 }} width="130">P. UNITARIO</TableCell>
+                      <TableCell sx={{ color: '#94a3b8', fontWeight: 600, fontSize: '0.75rem', py: 1.5 }} width="130">TOTAL</TableCell>
+                      <TableCell sx={{ py: 1.5 }} width="50" />
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {items.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} align="center" sx={{ py: 6, color: '#94a3b8' }}>
+                          <Stack sx={{ alignItems: 'center' }} spacing={1}>
+                            <ShoppingBag size={32} strokeWidth={1} style={{ opacity: 0.5 }} />
+                            <Typography variant="body2">No hay productos en esta compra</Typography>
+                          </Stack>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      items.map((item, index) => (
+                        <TableRow key={index} sx={{ '&:hover': { bgcolor: '#fbfcfd' } }}>
+                          <TableCell sx={{ py: 1.5 }}>
+                            <TextField
+                              select
+                              fullWidth
+                              size="small"
+                              value={item.productId}
+                              onChange={(e) => updateItem(index, "productId", e.target.value)}
+                              disabled={!supplierId}
+                              sx={{ 
+                                '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: '#fff' },
+                                '& .MuiSelect-select': { fontSize: '0.875rem' }
+                              }}
+                            >
+                              <MenuItem value=""><em>Seleccionar producto</em></MenuItem>
+                              {purchasableProducts.map((p) => (
+                                <MenuItem key={p.id} value={p.id} sx={{ fontSize: '0.875rem' }}>
+                                  <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', gap: 2 }}>
+                                    <Typography variant="inherit">{p.name}</Typography>
+                                    <Typography variant="caption" sx={{ color: '#94a3b8' }}>{p.sku}</Typography>
+                                  </Box>
+                                </MenuItem>
+                              ))}
+                            </TextField>
+                          </TableCell>
+                          <TableCell sx={{ py: 1.5 }}>
+                            <TextField
+                              type="number"
+                              size="small"
+                              value={item.quantity}
+                              onChange={(e) => updateItem(index, "quantity", e.target.value)}
+                              disabled={!supplierId}
+                              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: '#fff' } }}
+                              slotProps={{
+                                htmlInput: { min: 0, step: 0.1, style: { fontSize: '0.875rem' } }
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ py: 1.5 }}>
+                            <TextField
+                              type="number"
+                              size="small"
+                              value={item.unitPrice}
+                              onChange={(e) => updateItem(index, "unitPrice", e.target.value)}
+                              disabled={!supplierId}
+                              slotProps={{
+                                input: {
+                                  startAdornment: <InputAdornment position="start" sx={{ '& .MuiTypography-root': { fontSize: '0.75rem' } }}>$</InputAdornment>,
+                                  style: { fontSize: '0.875rem' }
+                                },
+                                htmlInput: { min: 0, step: 0.01 }
+                              }}
+                              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: '#fff' } }}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ py: 1.5 }}>
+                            <Typography sx={{ fontWeight: 700, fontSize: '0.875rem', color: '#1e293b' }}>
+                              {formatCurrency(item.totalPrice)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell sx={{ py: 1.5 }} align="right">
+                            <IconButton size="small" onClick={() => removeItem(index)} sx={{ color: '#f87171' }}>
+                              <Trash2 size={16} />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Paper>
+          </Grid>
+
+          {/* Right: Summary & Notes */}
+          <Grid size={{ xs: 12, lg: 4 }}>
+            <Stack spacing={3}>
+              {/* Summary Paper */}
+              <Paper variant="outlined" sx={{ p: 3, borderRadius: 3, borderColor: '#e2e8f0', bgcolor: '#f8fafc' }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, fontSize: '1rem', color: '#1e293b' }}>Resumen</Typography>
+                <Stack spacing={2}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" sx={{ color: '#64748b' }}>Artículos</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{items.length}</Typography>
+                  </Box>
+                  <Divider />
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography sx={{ fontWeight: 700, color: '#1e293b' }}>Total Compra</Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 800, color: '#16a34a' }}>
+                      {formatCurrency(totalAmount)}
+                    </Typography>
+                  </Box>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    size="large"
+                    disabled={isSubmitting || !supplierId || items.length === 0}
+                    onClick={handleSubmit}
+                    sx={{ mt: 2, py: 1.5, borderRadius: 2, bgcolor: '#334155', '&:hover': { bgcolor: '#1e293b' }, textTransform: 'none', boxShadow: 'none', fontWeight: 700 }}
+                  >
+                    Registrar Factura/Orden
+                  </Button>
+                </Stack>
+              </Paper>
+
+              {/* Notes Paper */}
+              <Paper variant="outlined" sx={{ p: 3, borderRadius: 3, borderColor: '#e2e8f0' }}>
+                <Typography variant="button" sx={{ display: 'block', mb: 1.5, color: '#94a3b8', fontWeight: 600 }}>
+                  Notas Adicionales
+                </Typography>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={4}
+                  placeholder="Referencia de factura, condiciones, etc..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, fontSize: '0.875rem' } }}
                 />
-              </svg>
-              Notas (Opcional)
-            </label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              rows={3}
-              placeholder="Notas adicionales sobre la compra..."
-            />
-          </div>
-
-          {/* Productos */}
-          <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-800 flex items-center gap-3">
-                <svg
-                  className="w-6 h-6 text-blue-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                  />
-                </svg>
-                Productos ({items.length})
-              </h2>
-              <button
-                type="button"
-                onClick={addItem}
-                disabled={!supplierId}
-                className={`px-5 py-2.5 rounded-xl font-medium shadow hover:shadow-md transition-all ${
-                  !supplierId
-                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    : "bg-gradient-to-r from-green-600 to-emerald-600 text-white"
-                }`}
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                  />
-                </svg>
-                Agregar Producto
-              </button>
-            </div>
-
-            {items.length === 0 && (
-              <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-xl">
-                No hay productos agregados
-              </div>
-            )}
-
-            {items.map((item, index) => (
-              <div
-                key={index}
-                className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6 p-5 bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl border border-gray-200"
-              >
-                <div className="md:col-span-5">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Producto *
-                  </label>
-                  <select
-                    value={item.productId}
-                    onChange={(e) =>
-                      updateItem(index, "productId", e.target.value)
-                    }
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                    disabled={!supplierId}
-                  >
-                    <option value="">Seleccionar producto</option>
-                    {purchasableProducts.map((product) => (
-                      <option key={product.id} value={product.id}>
-                        {product.name} {product.sku && `(${product.sku})`}
-                        {product.stock !== undefined &&
-                          ` - Stock: ${product.stock}`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cantidad *
-                  </label>
-                  <input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    value={item.quantity}
-                    onChange={(e) =>
-                      updateItem(index, "quantity", Number(e.target.value))
-                    }
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                    disabled={!supplierId}
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Precio Unitario *
-                  </label>
-                  <input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    value={item.unitPrice}
-                    onChange={(e) =>
-                      updateItem(index, "unitPrice", Number(e.target.value))
-                    }
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                    disabled={!supplierId}
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Total
-                  </label>
-                  <input
-                    type="text"
-                    value={new Intl.NumberFormat("es-MX", {
-                      style: "currency",
-                      currency: "MXN",
-                    }).format(item.totalPrice)}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 bg-gray-100"
-                    readOnly
-                  />
-                </div>
-
-                <div className="md:col-span-1 flex items-end">
-                  <button
-                    type="button"
-                    onClick={() => removeItem(index)}
-                    disabled={!supplierId}
-                    className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      !supplierId
-                        ? "bg-gray-300 text-gray-500"
-                        : "bg-gradient-to-r from-red-500 to-pink-500 text-white hover:shadow-md"
-                    } transition-all`}
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Total y botones */}
-          {items.length > 0 && (
-            <div className="pt-6 border-t border-gray-200">
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 mb-6">
-                <div className="flex flex-col sm:flex-row sm:justify-between items-center gap-4">
-                  <div>
-                    <p className="text-lg text-gray-700">Total de la Compra</p>
-                  </div>
-                  <div className="text-3xl font-bold text-green-600">
-                    {new Intl.NumberFormat("es-MX", {
-                      style: "currency",
-                      currency: "MXN",
-                    }).format(totalAmount)}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-4 justify-end">
-                <button
-                  type="button"
-                  onClick={() => router.back()}
-                  className="px-6 py-3 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-xl font-semibold shadow hover:shadow-md transition-all"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading || items.length === 0 || !supplierId}
-                  className={`px-6 py-3 rounded-xl font-semibold shadow hover:shadow-md transition-all flex items-center gap-2 ${
-                    loading || items.length === 0 || !supplierId
-                      ? "bg-blue-400 text-white cursor-not-allowed"
-                      : "bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
-                  }`}
-                >
-                  {loading ? (
-                    <>
-                      <svg
-                        className="animate-spin h-5 w-5 text-white"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        />
-                      </svg>
-                      Procesando...
-                    </>
-                  ) : (
-                    "Registrar Compra"
-                  )}
-                </button>
-              </div>
-            </div>
-          )}
-        </form>
-      </div>
-    </div>
+              </Paper>
+            </Stack>
+          </Grid>
+        </Grid>
+      </form>
+    </Box>
   );
 }

@@ -218,7 +218,6 @@ export async function GET(req: NextRequest) {
     const purchases = await prisma.purchase.findMany({
       where: {
         companyId: companyId, // ← FILTRADO POR EMPRESA
-        userId, // Opcional: si quieres filtrar también por usuario
       },
       include: {
         user: {
