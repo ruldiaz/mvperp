@@ -132,8 +132,8 @@ export default function Quotations() {
   };
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: "auto", py: 6, px: 3 }}>
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", mb: 6 }}>
+    <Box sx={{ maxWidth: 1200, mx: "auto", py: { xs: 4, md: 6 }, px: { xs: 1.5, sm: 3 } }}>
+      <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, justifyContent: "space-between", alignItems: { xs: "stretch", sm: "flex-end" }, gap: { xs: 3, sm: 0 }, mb: { xs: 4, sm: 6 } }}>
         <Box>
           <Typography variant="h4" sx={{ fontWeight: 700, color: '#1e293b', letterSpacing: '-0.02em', mb: 1 }}>
             Cotizaciones
@@ -147,13 +147,13 @@ export default function Quotations() {
           component={Link}
           href="/dashboard/sales/quotation/create"
           startIcon={<Plus size={18} strokeWidth={2} />}
-          sx={{ borderRadius: 1.5, px: 3, py: 1.2, bgcolor: '#334155', '&:hover': { bgcolor: '#1e293b' }, textTransform: 'none', boxShadow: 'none' }}
+          sx={{ borderRadius: 1.5, px: 3, py: 1.2, bgcolor: '#334155', '&:hover': { bgcolor: '#1e293b' }, textTransform: 'none', boxShadow: 'none', width: { xs: '100%', sm: 'auto' } }}
         >
           Crear Cotización
         </Button>
       </Box>
 
-      <Paper variant="outlined" sx={{ p: 2, mb: 4, borderRadius: 2, borderColor: '#e2e8f0', display: 'flex', gap: 2 }}>
+      <Paper variant="outlined" sx={{ p: { xs: 1.5, sm: 2 }, mb: 4, borderRadius: 2, borderColor: '#e2e8f0', display: 'flex', gap: { xs: 1, sm: 2 } }}>
         <TextField
           fullWidth
           size="small"
@@ -176,8 +176,8 @@ export default function Quotations() {
         </Button>
       </Paper>
 
-      <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, borderColor: '#e2e8f0', overflow: 'hidden' }}>
-        <Table>
+      <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, borderColor: '#e2e8f0', overflowX: 'auto' }}>
+        <Table sx={{ minWidth: 800 }}>
           <TableHead sx={{ bgcolor: '#f8fafc' }}>
             <TableRow>
               <TableCell sx={{ color: '#64748b', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase' }}>Folio</TableCell>
