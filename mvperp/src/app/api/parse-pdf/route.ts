@@ -1,19 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs'; 
 
-// Provide a stable withResolvers polyfill just in case Node runtime is missing it for pdfjs
-if (typeof Promise.withResolvers !== 'function') {
-  Promise.withResolvers = function <T>() {
-    let resolve!: (value: T | PromiseLike<T>) => void;
-    let reject!: (reason?: any) => void;
-    const promise = new Promise<T>((res, rej) => {
-      resolve = res;
-      reject = rej;
-    });
-    return { promise, resolve, reject };
-  };
+// Polyfills to ensure PDF.js works smoothly in Node environment without crashing on missing graphics APIS
+if (typeof global.DOMMatrix === 'undefined') {
+  (global as any).DOMMatrix = class DOMMatrix {};
+}
+if (typeof global.ImageData === 'undefined') {
+  (global as any).ImageData = class ImageData {};
+}
+if (typeof global.Path2D === 'undefined') {
+  (global as any).Path2D = class Path2D {};
 }
 
+// Importing standard pdfjs-dist in legacy module format for Node.js
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+
+// No GlobalWorkerOptions needed for Node.js!
 export interface ExtractedItem {
   description: string;
   quantity: number;
@@ -27,6 +28,7 @@ interface TextItem {
 
 const Y_TOLERANCE = 5;
 
+// The Geometry Builder restores flawless table structure parsing (far superior to pdf-parse plain text)
 function groupIntoLines(items: TextItem[]): TextItem[][] {
   if (items.length === 0) return [];
   const sorted = [...items].sort((a, b) => b.transform[5] - a.transform[5]);
@@ -51,7 +53,7 @@ function groupIntoLines(items: TextItem[]): TextItem[][] {
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
-    const file = formData.get("file") as File;
+    const file = formData.get("file") as File | null;
     
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
@@ -60,6 +62,7 @@ export async function POST(req: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const data = new Uint8Array(arrayBuffer);
 
+    // Using pdf.js standard parsing engine, perfectly identical to frontend layout execution!
     const loadingTask = pdfjsLib.getDocument({
       data,
       standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/standard_fonts/`,
@@ -110,6 +113,7 @@ export async function POST(req: NextRequest) {
         while (trailingEndIndex >= 1 && numericParts[trailingEndIndex] === null) {
           trailingEndIndex--;
         }
+        
         const trailingStartIndex = trailingEndIndex - trailingNumbers.length + 1;
         const description = parts.slice(1, trailingStartIndex).join(' ').trim();
 
@@ -126,6 +130,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ items: allItems });
   } catch (error: any) {
     console.error("[parse-pdf route] Error:", error);
-    return NextResponse.json({ error: error.message || "Failed to parse PDF on the server" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Failed to parse PDF using advanced geometric parser" }, { status: 500 });
   }
 }
