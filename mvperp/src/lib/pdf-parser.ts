@@ -1,7 +1,10 @@
-import * as pdfjsLib from 'pdfjs-dist';
+// Use the legacy build to ensure compatibility with older mobile browsers (like iOS Safari)
+// @ts-expect-error Types are missing for the legacy path, but it exports the same API
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 // Configure the worker using unpkg with HTTPS for better reliability
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+// Provide the legacy worker which transpiles modern JS (fixes "undefined is not a function" errors)
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/legacy/build/pdf.worker.min.mjs`;
 
 export interface ExtractedItem {
   description: string;
