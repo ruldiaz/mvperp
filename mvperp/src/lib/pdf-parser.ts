@@ -1,5 +1,4 @@
 // Use the legacy build to ensure compatibility with older mobile browsers (like iOS Safari)
-// @ts-expect-error Types are missing for the legacy path, but it exports the same API
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 // Configure the worker using unpkg with HTTPS for better reliability
