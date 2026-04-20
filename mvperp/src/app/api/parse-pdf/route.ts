@@ -1,20 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Polyfills to ensure PDF.js works smoothly in Node environment without crashing on missing graphics APIS
-if (typeof global.DOMMatrix === 'undefined') {
-  (global as any).DOMMatrix = class DOMMatrix {};
-}
-if (typeof global.ImageData === 'undefined') {
-  (global as any).ImageData = class ImageData {};
-}
-if (typeof global.Path2D === 'undefined') {
-  (global as any).Path2D = class Path2D {};
-}
+const pdfParse = require("pdf-parse");
 
-// Importing standard pdfjs-dist in legacy module format for Node.js
-import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
-
-// No GlobalWorkerOptions needed for Node.js!
 export interface ExtractedItem {
   description: string;
   quantity: number;
@@ -28,7 +15,7 @@ interface TextItem {
 
 const Y_TOLERANCE = 5;
 
-// The Geometry Builder restores flawless table structure parsing (far superior to pdf-parse plain text)
+// The Geometry Builder restores flawless table structure parsing
 function groupIntoLines(items: TextItem[]): TextItem[][] {
   if (items.length === 0) return [];
   const sorted = [...items].sort((a, b) => b.transform[5] - a.transform[5]);
@@ -50,6 +37,26 @@ function groupIntoLines(items: TextItem[]): TextItem[][] {
   return lines.map(line => line.sort((a, b) => a.transform[4] - b.transform[4]));
 }
 
+function customPageRender(pageData: any) {
+  return pageData.getTextContent().then(function(textContent: { items: TextItem[] }) {
+    const rawItems = textContent.items as any[];
+    const items: TextItem[] = rawItems.filter(
+      (item) => 'str' in item && 'transform' in item && typeof item.str === 'string'
+    );
+
+    const lines = groupIntoLines(items);
+    let fullText = "";
+
+    for (const line of lines) {
+      const lineText = line.map(li => li.str).join(' ').trim();
+      if (lineText) {
+        fullText += lineText + "\n";
+      }
+    }
+    return fullText;
+  });
+}
+
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
@@ -60,76 +67,68 @@ export async function POST(req: NextRequest) {
     }
 
     const arrayBuffer = await file.arrayBuffer();
-    const data = new Uint8Array(arrayBuffer);
+    const buffer = Buffer.from(arrayBuffer);
 
-    // Using pdf.js standard parsing engine, perfectly identical to frontend layout execution!
-    const loadingTask = pdfjsLib.getDocument({
-      data,
-      standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/standard_fonts/`,
-    });
+    // Using stable pdf-parse with custom geometric injection
+    const options = {
+      pagerender: customPageRender
+    };
+    
+    const pdfData = await pdfParse(buffer, options);
+    const text = pdfData.text;
 
-    const pdf = await loadingTask.promise;
     const allItems: ExtractedItem[] = [];
+    const plainLines = text.split('\n');
 
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const textContent = await page.getTextContent();
-      const rawItems = textContent.items as any[];
-      const items: TextItem[] = rawItems.filter(
-        (item) => 'str' in item && 'transform' in item && typeof item.str === 'string'
-      );
+    for (let rawLine of plainLines) {
+      const lineText = rawLine.trim();
+      if (!lineText) continue;
 
-      const lines = groupIntoLines(items);
+      const parts = lineText.split(/\s+/);
+      if (parts.length < 2) continue;
 
-      for (const line of lines) {
-        const lineText = line.map(li => li.str).join(' ').trim();
-        if (!lineText) continue;
+      const numericParts = parts.map((p: string) => {
+        const clean = p.replace(/[$,]/g, '');
+        return isNaN(Number(clean)) ? null : Number(clean);
+      });
 
-        const parts = lineText.split(/\s+/);
-        if (parts.length < 2) continue;
+      const qty = numericParts[0];
+      if (qty === null || qty <= 0) continue;
 
-        const numericParts = parts.map(p => {
-          const clean = p.replace(/[$,]/g, '');
-          return isNaN(Number(clean)) ? null : Number(clean);
+      const trailingNumbers: number[] = [];
+      let startedCollecting = false;
+      for (let j = numericParts.length - 1; j >= 1; j--) {
+        if (numericParts[j] !== null) {
+          trailingNumbers.unshift(numericParts[j] as number);
+          startedCollecting = true;
+        } else if (startedCollecting) {
+          break;
+        }
+      }
+
+      if (trailingNumbers.length === 0) continue;
+
+      let trailingEndIndex = parts.length - 1;
+      while (trailingEndIndex >= 1 && numericParts[trailingEndIndex] === null) {
+        trailingEndIndex--;
+      }
+      
+      const trailingStartIndex = trailingEndIndex - trailingNumbers.length + 1;
+      const description = parts.slice(1, trailingStartIndex).join(' ').trim();
+
+      if (description.length > 1) {
+        allItems.push({
+          description,
+          quantity: qty,
+          numericColumns: trailingNumbers,
         });
-
-        const qty = numericParts[0];
-        if (qty === null || qty <= 0) continue;
-
-        const trailingNumbers: number[] = [];
-        let startedCollecting = false;
-        for (let j = numericParts.length - 1; j >= 1; j--) {
-          if (numericParts[j] !== null) {
-            trailingNumbers.unshift(numericParts[j] as number);
-            startedCollecting = true;
-          } else if (startedCollecting) {
-            break;
-          }
-        }
-
-        if (trailingNumbers.length === 0) continue;
-
-        let trailingEndIndex = parts.length - 1;
-        while (trailingEndIndex >= 1 && numericParts[trailingEndIndex] === null) {
-          trailingEndIndex--;
-        }
-        
-        const trailingStartIndex = trailingEndIndex - trailingNumbers.length + 1;
-        const description = parts.slice(1, trailingStartIndex).join(' ').trim();
-
-        if (description.length > 1) {
-          allItems.push({
-            description,
-            quantity: qty,
-            numericColumns: trailingNumbers,
-          });
-        }
       }
     }
 
     return NextResponse.json({ items: allItems });
   } catch (error: any) {
     console.error("[parse-pdf route] Error:", error);
-    return NextResponse.json({ error: error.message || "Failed to parse PDF using advanced geometric parser" }, { status: 500 });
+    // Explicitly send the exact error text so the frontend can display it if it fails!
+    return NextResponse.json({ error: error.message || String(error) }, { status: 500 });
   }
 }
