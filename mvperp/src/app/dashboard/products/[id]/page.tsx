@@ -7,7 +7,8 @@ import Image from "next/image";
 import { toast } from "react-hot-toast";
 import {
   Box, Typography, Button, TextField, Paper, Checkbox, FormControlLabel,
-  CircularProgress, Stack, Select, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions, InputAdornment, IconButton, FormControl, InputLabel, Grid
+  CircularProgress, Stack, Select, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions, InputAdornment, IconButton, FormControl, InputLabel, Grid,
+  ToggleButtonGroup, ToggleButton, Chip
 } from "@mui/material";
 import { 
   ArrowLeft, Info, Package, FileText, Tag, Image as ImageIcon, Plus, Trash2, List as ListIcon, Save, UploadCloud, Edit3, AlertTriangle, Settings
@@ -33,13 +34,11 @@ export default function ProductDetail() {
   const fetchImage = async (imageKey: string) => {
     try {
       const res = await fetch(`/api/proxyImage?imageKey=${imageKey}`);
-      if (!res.ok) throw new Error("Error al cargar la imagen");
+      if (!res.ok) return; // Silently ignore — not all products have Truper images
       const data = await res.json();
-      setImage(data.imageUrl);
-    } catch (error) {
-      console.error(error);
-      setImage("/placeholder-image.png");
-      setError("No se pudo cargar la imagen");
+      if (data.imageUrl) setImage(data.imageUrl);
+    } catch {
+      // Ignore fetch errors for proxy image — it's a best-effort fallback
     }
   };
 
@@ -354,6 +353,36 @@ export default function ProductDetail() {
                     )}
                   </Grid>
                 </Grid>
+
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 0.5 }}>
+                  <Typography variant="body2" sx={{ color: '#475569', fontWeight: 600 }}>Precios:</Typography>
+                  {isEditing ? (
+                    <ToggleButtonGroup
+                      value={form.ivaIncluded ? "con" : "sin"}
+                      exclusive
+                      onChange={(_, val) => {
+                        if (val !== null) setForm((prev) => prev ? { ...prev, ivaIncluded: val === "con" } : prev);
+                      }}
+                      size="small"
+                      sx={{ '& .MuiToggleButton-root': { textTransform: 'none', fontSize: '0.75rem', px: 1.5, py: 0.3, borderColor: '#cbd5e1', '&.Mui-selected': { bgcolor: '#334155', color: '#fff', '&:hover': { bgcolor: '#1e293b' } } } }}
+                    >
+                      <ToggleButton value="con">Con IVA</ToggleButton>
+                      <ToggleButton value="sin">Sin IVA</ToggleButton>
+                    </ToggleButtonGroup>
+                  ) : (
+                    <Chip
+                      label={form.ivaIncluded ? "Con IVA incluido" : "Sin IVA (se suma aparte)"}
+                      size="small"
+                      sx={{
+                        fontWeight: 600,
+                        fontSize: '0.72rem',
+                        bgcolor: form.ivaIncluded ? '#dcfce7' : '#fef3c7',
+                        color: form.ivaIncluded ? '#16a34a' : '#d97706',
+                        border: `1px solid ${form.ivaIncluded ? '#bbf7d0' : '#fde68a'}`,
+                      }}
+                    />
+                  )}
+                </Box>
                 
                 <Grid container spacing={2}>
                   <Grid size={{ xs: 12, sm: 6 }}>

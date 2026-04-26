@@ -33,7 +33,9 @@ import {
   Trash2,
   ArrowRightLeft,
   Filter,
+  Download,
 } from "lucide-react";
+import { downloadQuotationPDF, CompanyInfo } from "./components/QuotationPDF";
 
 const IVA_PERCENTAGE = 0.16;
 
@@ -54,6 +56,8 @@ export default function Quotations() {
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
+  const [company, setCompany] = useState<CompanyInfo | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const router = useRouter();
 
   const fetchQuotations = useCallback(
@@ -86,6 +90,18 @@ export default function Quotations() {
   );
 
   useEffect(() => {
+    const fetchCompany = async () => {
+      try {
+        const res = await fetch("/api/company", { credentials: "include" });
+        if (res.ok) setCompany((await res.json()).company);
+      } catch (err) {
+        console.error("Error fetching company", err);
+      }
+    };
+    fetchCompany();
+  }, []);
+
+  useEffect(() => {
     const timeoutId = setTimeout(() => {
       fetchQuotations(1, searchTerm);
     }, 300);
@@ -106,6 +122,17 @@ export default function Quotations() {
       }
     } catch (err) {
       toast.error("Error al eliminar");
+    }
+  };
+
+  const handleDownload = async (q: Quotation) => {
+    try {
+      setDownloadingId(q.id!);
+      await downloadQuotationPDF(q, company);
+    } catch (err) {
+      toast.error("Error al descargar PDF");
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -206,17 +233,33 @@ export default function Quotations() {
                   <TableCell>{getStatusChip(q.status)}</TableCell>
                   <TableCell align="right">
                     <Stack direction="row" spacing={0.5} sx={{ justifyContent: "flex-end" }}>
-                      <IconButton size="small" component={Link} href={`/dashboard/sales/quotation/${q.id}`} sx={{ color: '#94a3b8', '&:hover': { color: '#334155' } }}>
-                        <Eye size={18} strokeWidth={1.5} />
-                      </IconButton>
-                      {q.status === 'pending' && (
-                        <IconButton size="small" component={Link} href={`/dashboard/sales/quotation/${q.id}/edit`} sx={{ color: '#94a3b8', '&:hover': { color: '#334155' } }}>
-                          <FileEdit size={18} strokeWidth={1.5} />
+                      <Tooltip title="Ver detalles">
+                        <IconButton size="small" component={Link} href={`/dashboard/sales/quotation/${q.id}`} sx={{ color: '#94a3b8', '&:hover': { color: '#334155' } }}>
+                          <Eye size={18} strokeWidth={1.5} />
                         </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Descargar PDF">
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleDownload(q)} 
+                          disabled={downloadingId === q.id}
+                          sx={{ color: '#94a3b8', '&:hover': { color: '#3b82f6' } }}
+                        >
+                          {downloadingId === q.id ? <CircularProgress size={16} /> : <Download size={18} strokeWidth={1.5} />}
+                        </IconButton>
+                      </Tooltip>
+                      {q.status === 'pending' && (
+                        <Tooltip title="Editar">
+                          <IconButton size="small" component={Link} href={`/dashboard/sales/quotation/${q.id}/edit`} sx={{ color: '#94a3b8', '&:hover': { color: '#334155' } }}>
+                            <FileEdit size={18} strokeWidth={1.5} />
+                          </IconButton>
+                        </Tooltip>
                       )}
-                      <IconButton size="small" onClick={() => handleDelete(q.id!)} sx={{ color: '#94a3b8', '&:hover': { color: '#ef4444' } }}>
-                        <Trash2 size={18} strokeWidth={1.5} />
-                      </IconButton>
+                      <Tooltip title="Eliminar">
+                        <IconButton size="small" onClick={() => handleDelete(q.id!)} sx={{ color: '#94a3b8', '&:hover': { color: '#ef4444' } }}>
+                          <Trash2 size={18} strokeWidth={1.5} />
+                        </IconButton>
+                      </Tooltip>
                     </Stack>
                   </TableCell>
                 </TableRow>
