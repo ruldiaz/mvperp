@@ -195,7 +195,7 @@ export default function LandingPage() {
               <Paper
                 variant="outlined"
                 sx={{
-                  p: 5,
+                  p: { xs: 3, md: 5 },
                   height: "100%",
                   borderRadius: 3,
                   borderColor: "#e2e8f0",
@@ -207,7 +207,7 @@ export default function LandingPage() {
                   },
                 }}
               >
-                <Box sx={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
+                <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: { xs: 2, md: 3 }, alignItems: { xs: "center", sm: "flex-start" }, textAlign: { xs: "center", sm: "left" } }}>
                   <Box
                     sx={{
                       p: 1.5,
@@ -220,7 +220,7 @@ export default function LandingPage() {
                     {section.icon}
                   </Box>
                   <Box sx={{ flex: 1 }}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                    <Box sx={{ display: "flex", justifyContent: { xs: "center", sm: "space-between" }, alignItems: "center", mb: 2 }}>
                       <Typography variant="h5" sx={{ fontWeight: 700, color: "#1e293b" }}>
                         {section.title}
                       </Typography>
@@ -228,7 +228,7 @@ export default function LandingPage() {
                         href="#landing-top"
                         size="small"
                         startIcon={<ChevronUp size={14} />}
-                        sx={{ color: "#94a3b8", textTransform: "none", fontSize: "0.75rem", minWidth: "auto", p: 0.5 }}
+                        sx={{ display: { xs: "none", sm: "flex" }, color: "#94a3b8", textTransform: "none", fontSize: "0.75rem", minWidth: "auto", p: 0.5 }}
                       >
                         Top
                       </Button>
@@ -244,7 +244,7 @@ export default function LandingPage() {
                       <Grid container spacing={1.5}>
                         {section.features.map((feature, idx) => (
                           <Grid key={idx} size={{ xs: 12, sm: 6 }}>
-                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 1, justifyContent: { xs: "center", sm: "flex-start" } }}>
                               <CheckCircle2 size={14} color="#64748b" />
                               <Typography variant="body2" sx={{ color: "#475569", fontWeight: 500 }}>
                                 {feature}
@@ -301,7 +301,7 @@ export default function LandingPage() {
           
           <Divider sx={{ borderColor: "rgba(255,255,255,0.1)", mb: 6 }} />
           
-          <Box sx={{ display: "flex", flexDirection: { xs: "column", md: "row" }, justifyContent: "space-between", alignItems: "center", gap: 4 }}>
+          <Box sx={{ display: "flex", flexDirection: { xs: "column", md: "row" }, justifyContent: "space-between", alignItems: "center", gap: { xs: 3, md: 4 }, textAlign: { xs: "center", md: "left" } }}>
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 800, mb: 1 }}>
                 MVP ERP

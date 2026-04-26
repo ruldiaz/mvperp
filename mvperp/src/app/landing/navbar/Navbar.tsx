@@ -12,6 +12,13 @@ import {
   Menu,
   MenuItem,
   IconButton,
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Divider,
 } from "@mui/material";
 import {
   ShieldCheck,
@@ -38,6 +45,8 @@ export default function Navbar() {
     setAnchorEl(null);
   };
 
+  const [mobileOpen, setMobileOpen] = useState(false);
+
   const funcionalidades = [
     { nombre: "Punto de Venta", href: "#punto-venta", icon: <Store size={18} /> },
     { nombre: "Facturación", href: "#facturacion", icon: <Receipt size={18} /> },
@@ -52,16 +61,17 @@ export default function Navbar() {
   ];
 
   return (
-    <AppBar
-      position="sticky"
-      elevation={0}
-      sx={{
-        bgcolor: "rgba(255, 255, 255, 0.8)",
-        backdropFilter: "blur(8px)",
-        borderBottom: "1px solid #e2e8f0",
-        color: "#1e293b",
-      }}
-    >
+    <>
+      <AppBar
+        position="sticky"
+        elevation={0}
+        sx={{
+          bgcolor: "rgba(255, 255, 255, 0.8)",
+          backdropFilter: "blur(8px)",
+          borderBottom: "1px solid #e2e8f0",
+          color: "#1e293b",
+        }}
+      >
       <Container maxWidth="lg">
         <Toolbar disableGutters sx={{ justifyContent: "space-between" }}>
           {/* Logo */}
@@ -198,6 +208,7 @@ export default function Navbar() {
 
           {/* Mobile Menu Icon */}
           <IconButton
+            onClick={() => setMobileOpen(true)}
             sx={{ display: { xs: "flex", md: "none" }, color: "#475569" }}
           >
             <MenuIcon size={24} />
@@ -205,5 +216,79 @@ export default function Navbar() {
         </Toolbar>
       </Container>
     </AppBar>
+
+      {/* Mobile Drawer */}
+      <Drawer
+        variant="temporary"
+        anchor="right"
+        open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        sx={{
+          "& .MuiDrawer-paper": { boxSizing: "border-box", width: 280 },
+        }}
+      >
+        <Box onClick={() => setMobileOpen(false)} sx={{ textAlign: "center", py: 2 }}>
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1.5, mb: 2 }}>
+            <Box sx={{ width: 28, height: 28, bgcolor: "#334155", borderRadius: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <ShieldCheck color="white" size={16} strokeWidth={1.5} />
+            </Box>
+            <Typography variant="h6" sx={{ fontWeight: 800 }}>
+              MVP ERP
+            </Typography>
+          </Box>
+          <Divider />
+          <List>
+            <ListItem disablePadding>
+              <Typography variant="overline" sx={{ px: 2, pt: 2, color: "#94a3b8", fontWeight: 700 }}>
+                Funcionalidades
+              </Typography>
+            </ListItem>
+            {funcionalidades.map((item) => (
+              <ListItem key={item.nombre} disablePadding>
+                <ListItemButton component="a" href={item.href} sx={{ py: 1.5 }}>
+                  <ListItemIcon sx={{ minWidth: 36, color: "#64748b" }}>
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText primary={<Typography sx={{ fontWeight: 500, color: "#475569" }}>{item.nombre}</Typography>} />
+                </ListItemButton>
+              </ListItem>
+            ))}
+            <Divider sx={{ my: 1 }} />
+            <ListItem disablePadding>
+              <Typography variant="overline" sx={{ px: 2, pt: 1, color: "#94a3b8", fontWeight: 700 }}>
+                Compañía
+              </Typography>
+            </ListItem>
+            {navigationItems.map((item) => (
+              <ListItem key={item.nombre} disablePadding>
+                <ListItemButton component="a" href={item.href} sx={{ py: 1.5 }}>
+                  <ListItemText primary={<Typography sx={{ fontWeight: 500, color: "#475569" }}>{item.nombre}</Typography>} />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+          <Box sx={{ px: 2, mt: 2, display: "flex", flexDirection: "column", gap: 1.5 }}>
+            <Button
+              component={Link}
+              href="/login"
+              variant="outlined"
+              fullWidth
+              sx={{ color: "#475569", borderColor: "#cbd5e1", textTransform: "none", fontWeight: 600 }}
+            >
+              Ingresar
+            </Button>
+            <Button
+              component={Link}
+              href="/register"
+              variant="contained"
+              fullWidth
+              sx={{ bgcolor: "#334155", textTransform: "none", fontWeight: 600, boxShadow: "none" }}
+            >
+              Comenzar gratis
+            </Button>
+          </Box>
+        </Box>
+      </Drawer>
+    </>
   );
 }

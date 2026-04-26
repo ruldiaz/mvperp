@@ -80,7 +80,7 @@ export default function DashboardPage() {
       `}</style>
 
       {/* Welcome Header */}
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 6, flexWrap: "wrap", gap: 3 }}>
+      <Box sx={{ display: "flex", flexDirection: { xs: "column", md: "row" }, justifyContent: "space-between", alignItems: { xs: "stretch", md: "flex-start" }, mb: 6, gap: 3 }}>
         <Box>
           <Typography variant="h4" sx={{ fontWeight: 800, color: "#1e293b", letterSpacing: "-0.02em", mb: 1 }}>
             ¡Bienvenido, <Box component="span" sx={{ color: "#334155" }}>{user.name || user.email.split("@")[0]}</Box>!
@@ -152,7 +152,7 @@ export default function DashboardPage() {
                 { user: "Pedro López", action: "actualizó el inventario", time: "Hace 6 horas", icon: <Package size={18} color="#64748b" /> },
                 { user: "Ana Martínez", action: "agregó un nuevo cliente", time: "Hace 1 día", icon: <Users size={18} color="#64748b" /> },
               ].map((item, idx) => (
-                <Box key={idx} sx={{ p: 2.5, display: "flex", alignItems: "center", gap: 2.5, "&:hover": { bgcolor: "#fcfcfd" }, borderBottom: idx < 3 ? "1px solid #f1f5f9" : "none" }}>
+                <Box key={idx} sx={{ p: { xs: 2, sm: 2.5 }, display: "flex", flexWrap: { xs: "wrap", sm: "nowrap" }, alignItems: { xs: "flex-start", sm: "center" }, gap: { xs: 1.5, sm: 2.5 }, "&:hover": { bgcolor: "#fcfcfd" }, borderBottom: idx < 3 ? "1px solid #f1f5f9" : "none" }}>
                   <Box sx={{ width: 40, height: 40, borderRadius: 2, bgcolor: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b" }}>
                     {item.icon}
                   </Box>
@@ -164,7 +164,9 @@ export default function DashboardPage() {
                       <Clock size={18} color="#64748b" /> {item.time}
                     </Typography>
                   </Box>
-                  <Button variant="text" size="small" sx={{ textTransform: "none", color: "#475569", fontWeight: 600 }}>Detalles</Button>
+                  <Box sx={{ width: { xs: "100%", sm: "auto" }, textAlign: { xs: "right", sm: "left" } }}>
+                    <Button variant="text" size="small" sx={{ textTransform: "none", color: "#475569", fontWeight: 600 }}>Detalles</Button>
+                  </Box>
                 </Box>
               ))}
             </Box>
