@@ -22,6 +22,7 @@ async function verifyAuth(request: NextRequest) {
       userId: string;
       email: string;
       name?: string;
+      companyId: string;
     };
     return { user: payload };
   } catch {
@@ -47,8 +48,10 @@ export async function GET(request: NextRequest) {
 
     const skip = (page - 1) * limit;
 
-    // Usar el tipo correcto de Prisma para la condición where
-    const whereCondition: Prisma.InvoiceWhereInput = {};
+    // Usar el tipo correcto de Prisma para la condición where y asegurar filtro por compañía
+    const whereCondition: Prisma.InvoiceWhereInput = {
+      companyId: authResult.user.companyId,
+    };
 
     if (search) {
       whereCondition.OR = [

@@ -8,6 +8,7 @@ interface JwtPayload {
   userId: string;
   email: string;
   name?: string;
+  companyId: string;
 }
 
 // GET /api/suppliers/stats
@@ -25,9 +26,18 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
 
-    // ✅ Validar token sin variable no usada
+    // ✅ Validar token y extraer payload
+    let companyId: string;
     try {
-      jwt.verify(token, JWT_SECRET) as JwtPayload;
+      const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
+      companyId = payload.companyId;
+
+      if (!companyId) {
+        return NextResponse.json(
+          { error: "Usuario sin empresa asociada" },
+          { status: 403 }
+        );
+      }
     } catch {
       return NextResponse.json(
         { error: "Token inválido o expirado" },
@@ -35,15 +45,19 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const totalSuppliers = await prisma.supplier.count();
+    const totalSuppliers = await prisma.supplier.count({
+      where: { companyId },
+    });
 
     const totalPurchases = await prisma.purchase.aggregate({
+      where: { companyId },
       _sum: {
         totalAmount: true,
       },
     });
 
     const topSuppliers = await prisma.supplier.findMany({
+      where: { companyId },
       orderBy: {
         totalPurchases: "desc",
       },
