@@ -19,6 +19,7 @@ import {
   InputAdornment,
   Collapse,
   Paper,
+  Autocomplete,
 } from "@mui/material";
 import {
   Plus,
@@ -481,15 +482,36 @@ export default function QuotationForm({
                 <Grid size={{ xs: 12, md: 4 }}>
                   <Typography variant="caption" sx={mobileLabel}>PRODUCTO</Typography>
                   <FormControl fullWidth size="small">
-                    <Select
-                      value={item.productId}
-                      onChange={(e) => handleProductChange(index, e.target.value)}
-                      sx={mobileSelect}
-                    >
-                      {products.map((p) => (
-                        <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
-                      ))}
-                    </Select>
+                    <Autocomplete
+                      size="small"
+                      options={products}
+                      getOptionLabel={(option) => option.name}
+                      value={products.find((p) => p.id === item.productId) || null}
+                      onChange={(event, newValue) => {
+                        handleProductChange(index, newValue?.id || "");
+                      }}
+                      noOptionsText="No se encontraron productos"
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          placeholder="Buscar producto..."
+                          sx={{
+                            ...mobileInput,
+                            '& .MuiOutlinedInput-root': {
+                              ...mobileInput['& .MuiOutlinedInput-root'],
+                              padding: '2px 8px',
+                            },
+                            '@media (max-width: 600px)': {
+                              ...mobileInput['@media (max-width: 600px)'],
+                              '& .MuiOutlinedInput-root': {
+                                ...mobileInput['@media (max-width: 600px)']['& .MuiOutlinedInput-root'],
+                                padding: '1px 6px',
+                              }
+                            }
+                          }}
+                        />
+                      )}
+                    />
                   </FormControl>
                   {item.description && item.description !== products.find(p => p.id === item.productId)?.name && (
                     <Typography variant="caption" sx={{ color: '#10b981', mt: 0.3, display: 'block', fontWeight: 500, fontSize: { xs: '0.65rem', md: '0.75rem' } }}>
