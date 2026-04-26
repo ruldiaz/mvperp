@@ -20,6 +20,10 @@ import {
   Collapse,
   Paper,
   Autocomplete,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import {
   Plus,
@@ -33,6 +37,7 @@ import {
   FileText,
   User,
   Calendar,
+  UserPlus,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Product, QuotationItem } from "@/types/product";
@@ -142,6 +147,11 @@ export default function QuotationForm({
   const [items, setItems] = useState<ExtendedQuotationItem[]>([]);
   const [pricingMode, setPricingMode] = useState<PricingMode>("manual");
   const [globalMargin, setGlobalMargin] = useState<number>(0);
+
+  // --- New Client Modal State ---
+  const [showNewClientModal, setShowNewClientModal] = useState(false);
+  const [newClientData, setNewClientData] = useState({ name: "", email: "", phone: "", rfc: "" });
+  const [isCreatingClient, setIsCreatingClient] = useState(false);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("es-MX", {
@@ -303,6 +313,47 @@ export default function QuotationForm({
     toast.success(`${importedItems.length} partidas importadas correctamente`);
   };
 
+  // --- New Client Modal Handlers ---
+  const handleOpenNewClient = () => {
+    setNewClientData({ name: "", email: "", phone: "", rfc: "" });
+    setShowNewClientModal(true);
+  };
+
+  const handleCloseNewClient = () => {
+    setShowNewClientModal(false);
+  };
+
+  const handleSaveNewClient = async () => {
+    if (!newClientData.name.trim()) {
+      toast.error("El nombre del cliente es obligatorio");
+      return;
+    }
+    setIsCreatingClient(true);
+    try {
+      const res = await fetch("/api/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(newClientData),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Error al crear cliente");
+      }
+      const data = await res.json();
+      const created: Customer = data.customer;
+      setCustomers((prev) => [...prev, created]);
+      setSelectedCustomer(created.id || "");
+      toast.success(`Cliente "${created.name}" creado exitosamente`);
+      setShowNewClientModal(false);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error desconocido";
+      toast.error(msg);
+    } finally {
+      setIsCreatingClient(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCustomer) return toast.error("Selecciona un cliente");
@@ -414,7 +465,13 @@ export default function QuotationForm({
           <FormControl fullWidth variant="outlined" size="small">
             <Select
               value={selectedCustomer}
-              onChange={(e) => setSelectedCustomer(e.target.value)}
+              onChange={(e) => {
+                if (e.target.value === "__new_client__") {
+                  handleOpenNewClient();
+                  return;
+                }
+                setSelectedCustomer(e.target.value);
+              }}
               required
               sx={mobileSelect}
             >
@@ -422,6 +479,10 @@ export default function QuotationForm({
               {customers.map((c) => (
                 <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
               ))}
+              <Divider />
+              <MenuItem value="__new_client__" sx={{ color: '#2563eb', fontWeight: 600, gap: 1 }}>
+                <UserPlus size={14} /> Agregar Nuevo Cliente
+              </MenuItem>
             </Select>
           </FormControl>
         </Grid>
@@ -670,6 +731,72 @@ export default function QuotationForm({
           </Grid>
         </Grid>
       </Box>
+      {/* ===== New Client Modal ===== */}
+      <Dialog
+        open={showNewClientModal}
+        onClose={handleCloseNewClient}
+        maxWidth="sm"
+        fullWidth
+        slotProps={{ paper: { sx: { borderRadius: 2.5, p: 0.5 } } }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 700, fontSize: '1.1rem', color: '#1e293b', pb: 1 }}>
+          <UserPlus size={20} color="#2563eb" />
+          Nuevo Cliente
+        </DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '12px !important' }}>
+          <TextField
+            label="Nombre *"
+            fullWidth
+            size="small"
+            value={newClientData.name}
+            onChange={(e) => setNewClientData({ ...newClientData, name: e.target.value })}
+            autoFocus
+            sx={mobileInput}
+          />
+          <TextField
+            label="Email"
+            fullWidth
+            size="small"
+            type="email"
+            value={newClientData.email}
+            onChange={(e) => setNewClientData({ ...newClientData, email: e.target.value })}
+            sx={mobileInput}
+          />
+          <TextField
+            label="Teléfono"
+            fullWidth
+            size="small"
+            value={newClientData.phone}
+            onChange={(e) => setNewClientData({ ...newClientData, phone: e.target.value })}
+            sx={mobileInput}
+          />
+          <TextField
+            label="RFC"
+            fullWidth
+            size="small"
+            value={newClientData.rfc}
+            onChange={(e) => setNewClientData({ ...newClientData, rfc: e.target.value.toUpperCase() })}
+            sx={mobileInput}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button
+            onClick={handleCloseNewClient}
+            sx={{ textTransform: 'none', color: '#64748b', fontWeight: 500 }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleSaveNewClient}
+            variant="contained"
+            disabled={isCreatingClient || !newClientData.name.trim()}
+            startIcon={isCreatingClient ? <CircularProgress size={14} color="inherit" /> : <Save size={16} />}
+            sx={{ textTransform: 'none', bgcolor: '#334155', '&:hover': { bgcolor: '#1e293b' }, boxShadow: 'none', borderRadius: 1.5, px: 3 }}
+          >
+            {isCreatingClient ? "Guardando..." : "Crear Cliente"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
