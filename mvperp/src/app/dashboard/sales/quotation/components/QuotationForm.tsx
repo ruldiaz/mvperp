@@ -24,6 +24,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  ToggleButtonGroup,
+  ToggleButton,
 } from "@mui/material";
 import {
   Plus,
@@ -38,6 +40,7 @@ import {
   User,
   Calendar,
   UserPlus,
+  Package,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Product, QuotationItem } from "@/types/product";
@@ -152,6 +155,12 @@ export default function QuotationForm({
   const [showNewClientModal, setShowNewClientModal] = useState(false);
   const [newClientData, setNewClientData] = useState({ name: "", email: "", phone: "", rfc: "" });
   const [isCreatingClient, setIsCreatingClient] = useState(false);
+
+  // --- New Product Modal State ---
+  const [showNewProductModal, setShowNewProductModal] = useState(false);
+  const [newProductItemIndex, setNewProductItemIndex] = useState<number | null>(null);
+  const [newProductData, setNewProductData] = useState({ name: "", price: "", cost: "", sku: "", ivaIncluded: true });
+  const [isCreatingProduct, setIsCreatingProduct] = useState(false);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("es-MX", {
@@ -354,6 +363,70 @@ export default function QuotationForm({
     }
   };
 
+  // --- New Product Modal Handlers ---
+  const handleOpenNewProduct = (itemIndex: number) => {
+    setNewProductData({ name: "", price: "", cost: "", sku: "", ivaIncluded: true });
+    setNewProductItemIndex(itemIndex);
+    setShowNewProductModal(true);
+  };
+
+  const handleCloseNewProduct = () => {
+    setShowNewProductModal(false);
+    setNewProductItemIndex(null);
+  };
+
+  const handleSaveNewProduct = async () => {
+    if (!newProductData.name.trim()) {
+      toast.error("El nombre del producto es obligatorio");
+      return;
+    }
+    setIsCreatingProduct(true);
+    try {
+      const productPayload = {
+        name: newProductData.name,
+        type: "producto",
+        price: newProductData.price ? Number(newProductData.price) : undefined,
+        cost: newProductData.cost ? Number(newProductData.cost) : undefined,
+        sku: newProductData.sku || undefined,
+        sellAtPOS: false,
+        includeInCatalog: false,
+        requirePrescription: false,
+        useStock: true,
+        ivaIncluded: newProductData.ivaIncluded,
+      };
+
+      const formData = new FormData();
+      formData.append("product", JSON.stringify(productPayload));
+
+      const res = await fetch("/api/products", {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Error al crear producto");
+      }
+      const data = await res.json();
+      const created: Product = data.product;
+      setProducts((prev) => [...prev, created]);
+
+      // Auto-select in current item row
+      if (newProductItemIndex !== null) {
+        handleProductChange(newProductItemIndex, created.id || "");
+      }
+
+      toast.success(`Producto "${created.name}" creado exitosamente`);
+      setShowNewProductModal(false);
+      setNewProductItemIndex(null);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error desconocido";
+      toast.error(msg);
+    } finally {
+      setIsCreatingProduct(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCustomer) return toast.error("Selecciona un cliente");
@@ -551,7 +624,35 @@ export default function QuotationForm({
                       onChange={(event, newValue) => {
                         handleProductChange(index, newValue?.id || "");
                       }}
-                      noOptionsText="No se encontraron productos"
+                      noOptionsText={
+                        <Box
+                          onClick={() => handleOpenNewProduct(index)}
+                          sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', color: '#2563eb', fontWeight: 600, py: 0.5 }}
+                        >
+                          <Package size={14} /> Agregar Nuevo Producto
+                        </Box>
+                      }
+                      renderOption={(props, option) => {
+                        const { key, ...rest } = props;
+                        return (
+                          <li key={key} {...rest}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                              <Typography sx={{ fontSize: '0.85rem' }}>{option.name}</Typography>
+                              {option.price != null && (
+                                <Typography sx={{ fontSize: '0.75rem', color: '#64748b', ml: 1 }}>
+                                  {new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(option.price)}
+                                </Typography>
+                              )}
+                            </Box>
+                          </li>
+                        );
+                      }}
+                      filterOptions={(options, state) => {
+                        const filtered = options.filter((o) =>
+                          o.name.toLowerCase().includes(state.inputValue.toLowerCase())
+                        );
+                        return filtered;
+                      }}
                       renderInput={(params) => (
                         <TextField
                           {...params}
@@ -600,8 +701,8 @@ export default function QuotationForm({
                     onChange={(e) => updateItem(index, "taxMode", e.target.value as TaxMode)}
                     sx={mobileSelect}
                   >
-                    <MenuItem value="net">Neto</MenuItem>
-                    <MenuItem value="gross">Bruto</MenuItem>
+                    <MenuItem value="net">Sin IVA</MenuItem>
+                    <MenuItem value="gross">Con IVA</MenuItem>
                   </Select>
                 </Grid>
                 {pricingMode !== "manual" && (
@@ -731,6 +832,97 @@ export default function QuotationForm({
           </Grid>
         </Grid>
       </Box>
+      {/* ===== New Product Modal ===== */}
+      <Dialog
+        open={showNewProductModal}
+        onClose={handleCloseNewProduct}
+        maxWidth="sm"
+        fullWidth
+        slotProps={{ paper: { sx: { borderRadius: 2.5, p: 0.5 } } }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 700, fontSize: '1.1rem', color: '#1e293b', pb: 1 }}>
+          <Package size={20} color="#2563eb" />
+          Nuevo Producto
+        </DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '12px !important' }}>
+          <TextField
+            label="Nombre *"
+            fullWidth
+            size="small"
+            value={newProductData.name}
+            onChange={(e) => setNewProductData({ ...newProductData, name: e.target.value })}
+            autoFocus
+            sx={mobileInput}
+          />
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 6 }}>
+              <TextField
+                label="Precio de Venta"
+                fullWidth
+                size="small"
+                type="number"
+                value={newProductData.price}
+                onChange={(e) => setNewProductData({ ...newProductData, price: e.target.value })}
+                slotProps={{ input: { startAdornment: <InputAdornment position="start">$</InputAdornment> } }}
+                sx={mobileInput}
+              />
+            </Grid>
+            <Grid size={{ xs: 6 }}>
+              <TextField
+                label="Costo"
+                fullWidth
+                size="small"
+                type="number"
+                value={newProductData.cost}
+                onChange={(e) => setNewProductData({ ...newProductData, cost: e.target.value })}
+                slotProps={{ input: { startAdornment: <InputAdornment position="start">$</InputAdornment> } }}
+                sx={mobileInput}
+              />
+            </Grid>
+          </Grid>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Typography sx={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>Precios:</Typography>
+            <ToggleButtonGroup
+              value={newProductData.ivaIncluded ? "con" : "sin"}
+              exclusive
+              onChange={(_, val) => {
+                if (val !== null) setNewProductData({ ...newProductData, ivaIncluded: val === "con" });
+              }}
+              size="small"
+              sx={{ '& .MuiToggleButton-root': { textTransform: 'none', fontSize: '0.75rem', px: 1.5, py: 0.3, borderColor: '#cbd5e1', '&.Mui-selected': { bgcolor: '#334155', color: '#fff', '&:hover': { bgcolor: '#1e293b' } } } }}
+            >
+              <ToggleButton value="con">Con IVA</ToggleButton>
+              <ToggleButton value="sin">Sin IVA</ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+          <TextField
+            label="SKU"
+            fullWidth
+            size="small"
+            value={newProductData.sku}
+            onChange={(e) => setNewProductData({ ...newProductData, sku: e.target.value })}
+            sx={mobileInput}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button
+            onClick={handleCloseNewProduct}
+            sx={{ textTransform: 'none', color: '#64748b', fontWeight: 500 }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleSaveNewProduct}
+            variant="contained"
+            disabled={isCreatingProduct || !newProductData.name.trim()}
+            startIcon={isCreatingProduct ? <CircularProgress size={14} color="inherit" /> : <Save size={16} />}
+            sx={{ textTransform: 'none', bgcolor: '#334155', '&:hover': { bgcolor: '#1e293b' }, boxShadow: 'none', borderRadius: 1.5, px: 3 }}
+          >
+            {isCreatingProduct ? "Guardando..." : "Crear Producto"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* ===== New Client Modal ===== */}
       <Dialog
         open={showNewClientModal}
